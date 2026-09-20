@@ -19,7 +19,7 @@ def _track(lat, lon, n=120, r=0.004):
 
 def main() -> None:
     rnd = random.Random(7)
-    acts, day = [], rates.SCHEME_START
+    acts, day = [], rates.EGGS_START      # from the eggs' start, so the demo shows some won
     plan = [("run", "running", 2.4, 30), ("walk", "walking", 4.0, 40), ("cycle", "cycling", 12.0, 90),
             ("swim", "lap_swimming", 0.6, 0), ("run", "trail_running", 3.1, 55), ("cycle", "mountain_biking", 9.0, 140),
             ("walk", "hiking", 6.5, 210), ("other", "football", 3.0, 0), ("kayak", "kayaking", 3.2, 0)]
@@ -35,7 +35,7 @@ def main() -> None:
                      "avg_speed_mps": round(speed * (5 if i == 11 else 1), 2)})
     for a in acts:
         a["_track"] = _track(50.92 + rnd.uniform(-.02, .02), -1.29 + rnd.uniform(-.02, .02)) if a["sport"] not in ("swim", "other") else None
-    first = rates.SCHEME_START - dt.timedelta(days=rates.SCHEME_START.weekday())
+    first = rates.EGGS_START - dt.timedelta(days=rates.EGGS_START.weekday())
     ledger = {"weeks": {first.isoformat(): {"paid_on": (first + dt.timedelta(days=7)).isoformat()}}}
     real_has_track = store.has_track
     store.has_track = lambda i: any(a["id"] == i and a["_track"] for a in acts)

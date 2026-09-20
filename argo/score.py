@@ -131,6 +131,7 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
         "scheme": {
             "start": rates.SCHEME_START.isoformat(), "pence_per_point": rates.PENCE_PER_POINT,
             "week_cap_points": rates.WEEK_CAP_POINTS, "sports": list(rates.SPORTS),
+            "eggs_start": rates.EGGS_START.isoformat(),
             "distance_per_mile": rates.DISTANCE_PER_MILE, "swim_per_100m": rates.SWIM_PTS_PER_100M,
             "ascent_per_m": rates.ASCENT_PTS_PER_M,
         },
@@ -222,6 +223,7 @@ def selftest() -> None:
     assert w2["points"] == 0.0 and w2["n_flagged"] == 1, w2      # id 3 is struck, id 4 still flagged
     assert d["totals"]["paid_pence"] == 400
     won = {m["key"]: m for m in d["milestones"]["won"]}
+    assert rates.EGGS_START <= dt.date(2026, 9, 22), "fixture predates EGGS_START; move the fixture"
     assert {"first", "first_run", "run_1mi", "first_cycle", "cycle_5mi", "cycle_10mi", "climb_100"} <= set(won), won.keys()
     assert "pace_10" in won and "pace_9" not in won and won["run_1mi"]["date"] == "2026-09-22"   # 2.7 m/s = 9.9 min/mi
     assert d["milestones"]["hidden"] == d["milestones"]["total"] - len(won)

@@ -14,6 +14,8 @@ import datetime as dt
 
 # --- the scheme -----------------------------------------------------------------------------
 SCHEME_START = dt.date(2026, 5, 1)      # the day the ledger opens (Ben, 20/09: "backdate to 1st May"). Nothing before it earns.
+EGGS_START = dt.date(2026, 9, 21)       # the Easter eggs count from here (Ben, 20/09: the backdated months must not
+                                        # burn through them on the first load). Set it to SCHEME_START to count history.
 PENCE_PER_POINT = 25
 WEEK_CAP_POINTS = None                  # a ceiling on points paid per week; None = no cap (Ben, later)
 
@@ -70,6 +72,7 @@ def selftest() -> None:
     assert points_for("run", 50, 0) == {"distance": 0.0, "ascent": 0.0}            # under the floor
     assert pence(4.0) == 100 and pence(0.019) == 0 and pence(0.02) == 1 and pence(3.999) == 100
     assert gbp(1234) == "£12.34"
+    assert EGGS_START >= SCHEME_START
     print("rates: selftest OK")
 
 

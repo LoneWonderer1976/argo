@@ -19,7 +19,7 @@ in the same week), sports_in_week, all_sports, single_time / total_time (seconds
 import datetime as dt
 from dataclasses import dataclass
 
-from .rates import SPORTS, pence
+from .rates import EGGS_START, SPORTS, pence
 
 MI = 1609.344
 KM = 1000.0
@@ -297,11 +297,13 @@ def _blank_week():
     return {"count": 0, "sports": set(), "days": set()}
 
 
-def achieved(rows: list[dict]) -> list[dict]:
+def achieved(rows: list[dict], start: dt.date | None = None) -> list[dict]:
     """Milestones won, each at the first activity that crossed it. `rows` are score.py's rows in
-    any order; struck activities and unscored sports are ignored."""
-    rows = sorted((r for r in rows if not r.get("excluded") and r.get("sport") in SPORTS),
-                  key=lambda r: r["start_local"])
+    any order; struck activities, unscored sports and anything before EGGS_START are ignored --
+    the eggs' totals and streaks start from EGGS_START, whatever the ledger is backdated to."""
+    since = (start or EGGS_START).isoformat()
+    rows = sorted((r for r in rows if not r.get("excluded") and r.get("sport") in SPORTS
+                   and r["start_local"][:10] >= since), key=lambda r: r["start_local"])
     won: dict[str, dict] = {}
     dist = {s: 0.0 for s in SPORTS} | {"any": 0.0}
     count = {s: 0 for s in SPORTS} | {"any": 0}
@@ -405,7 +407,7 @@ def selftest() -> None:
         row(5, "other", "2026-05-13", 50 * MI, 0),                             # unscored: counts for nothing
         {**row(6, "run", "2026-05-14", 10 * MI, 0), "excluded": "the car"},    # struck: nothing
     ]
-    got = {a["key"]: a for a in achieved(rows)}
+    got = {a["key"]: a for a in achieved(rows, start=dt.date(2026, 5, 1))}
     for k in ("first", "first_run", "run_1mi", "run_2mi", "pace_12", "pace_10", "first_cycle", "cycle_5mi",
               "cycle_10mi", "hour_long", "first_walk", "walk_2mi", "walk_3mi", "walk_5mi", "early_bird",
               "climb_100", "weekend", "week_3", "triathlete_week"):
@@ -416,8 +418,11 @@ def selftest() -> None:
     assert "streak_3" not in got and "dawn_patrol" not in got and "first_swim" not in got
     assert got["money_100"]["activity_id"] == 1                                  # 8.4 + 1.2 pts = 240p on the first run
     assert achieved([]) == []
+    assert achieved(rows) == [] or EGGS_START <= dt.date(2026, 5, 4), "May's activities must not win eggs under the default start"
+    later = [{**rows[0], "start_local": f"{EGGS_START} 16:00:00", "week": (EGGS_START - dt.timedelta(days=EGGS_START.weekday())).isoformat()}]
+    assert "run_2mi" in {a["key"] for a in achieved(later)}
     # a milestone is won once and dated to the first crossing
-    twice = achieved(rows + [row(7, "run", "2026-06-01", 2.5 * MI)])
+    twice = achieved(rows + [row(7, "run", "2026-06-01", 2.5 * MI)], start=dt.date(2026, 5, 1))
     assert sum(1 for a in twice if a["key"] == "run_2mi") == 1 and {a["key"]: a for a in twice}["run_2mi"]["date"] == "2026-05-04"
     print(f"milestones: selftest OK ({len(MILESTONES)} eggs)")
 

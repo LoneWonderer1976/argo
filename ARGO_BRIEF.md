@@ -129,6 +129,22 @@ like you to do as many of the steps as you can before I do anything manually."*
   Pages and sets `PAGE_URL`. The GitHub CLI was installed with winget for this. Nothing else
   is manual.
 
+## Two clocks: the money from 1 May, the eggs from 21 September (20/09/2026, late)
+
+Ben: *"will the easter eggs get burnt through on first load"* — and then, *"can we set the
+pocket money to back date to May but eggs start from tomorrow."* As first built the five
+backdated months would have won thirty-odd eggs the moment the first sync landed, with the
+fanfare skipped for a backlog that size: the discovery gone before he had opened the page once.
+So `rates.EGGS_START` (21 September 2026, the Monday) is a second clock: `milestones.achieved()`
+ignores every activity before it, and its totals, counts and streaks start there too, while
+the ledger keeps paying from `SCHEME_START`. Set `EGGS_START = SCHEME_START` to count history
+instead. `check.py` asserts the eggs' start is not before the ledger's.
+
+Also settled: **the page is public** (GitHub Pages from a private repo is public on the free
+plan; private sites are an Enterprise feature). Ben chose to accept it over a Strava-style
+privacy trim on the tracks or no maps at all — *"I'll accept it"*. The address is his
+username plus "argo"; the page carries Thomas's first name and his routes.
+
 ## Not built, deliberately
 
 - **Screen time.** Ben: *"or possibly screentime or both"*. Points are the currency; a second
