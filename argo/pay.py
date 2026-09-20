@@ -3,6 +3,7 @@
     python -m argo.pay                       # dry run: shows the oldest unpaid week and what it would mark
     python -m argo.pay --apply               # mark it paid, today
     python -m argo.pay --week 2026-09-21 --note "cash" --apply
+    python -m argo.pay --through 2026-09-21 --apply    # every unpaid week up to and including that one
     python -m argo.pay --undo --week 2026-09-21 --apply
     python -m argo.pay --strike 12345678 --reason "that was the car" --apply
     python -m argo.pay --unstrike 12345678 --apply
@@ -48,6 +49,17 @@ def mark_paid(monday: str, note: str | None, apply: bool) -> None:
         store.write_ledger(ledger)
 
 
+def mark_through(monday: str, note: str | None, apply: bool) -> None:
+    """Every owed week up to and including `monday` -- for settling a backlog in one go."""
+    data = score.build()
+    owed = [w["monday"] for w in data["weeks"] if w["status"] == "owed" and w["monday"] <= monday]
+    if not owed:
+        print(f"nothing owed up to {monday}")
+        return
+    for m in sorted(owed):
+        mark_paid(m, note, apply)
+
+
 def unmark(monday: str, apply: bool) -> None:
     ledger = store.ledger()
     if monday not in ledger["weeks"]:
@@ -81,6 +93,7 @@ def unstrike(activity_id: str, apply: bool) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--week", help="the week's Monday (default: the oldest unpaid week)")
+    ap.add_argument("--through", help="mark every unpaid week up to and including this Monday")
     ap.add_argument("--note")
     ap.add_argument("--undo", action="store_true", help="un-mark the week")
     ap.add_argument("--strike", metavar="ID", help="exclude an activity from scoring")
@@ -92,6 +105,8 @@ def main() -> None:
         strike(a.strike, a.reason, a.apply)
     elif a.unstrike:
         unstrike(a.unstrike, a.apply)
+    elif a.through:
+        mark_through(a.through, a.note, a.apply)
     elif a.undo:
         if not a.week:
             raise SystemExit("--undo needs --week")

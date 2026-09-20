@@ -17,8 +17,8 @@ import datetime as dt
 import json
 import shutil
 
-from . import rates, store
-from .weeks import last_week, this_week, today_uk, week_for, week_label
+from . import milestones, rates, store
+from .weeks import last_week, this_week, today_uk, week_for, week_label, week_of
 
 
 def flags_for(row: dict) -> list[str]:
@@ -68,13 +68,13 @@ def scored_activities(activities: list[dict], excluded: dict) -> list[dict]:
 
 
 def weeks_from(rows: list[dict], ledger: dict) -> list[dict]:
-    """One entry per week from SCHEME_START to this week, newest first, empty weeks included."""
+    """One entry per week from the week of SCHEME_START to this week, newest first, empty weeks included."""
     by_week: dict[str, list[dict]] = {}
     for r in rows:
         by_week.setdefault(r["week"], []).append(r)
     paid = ledger.get("weeks", {})
     out = []
-    monday = rates.SCHEME_START
+    monday = week_of(rates.SCHEME_START)
     end = this_week()
     if rows:   # a watch clock ahead of the calendar, or a selftest run before the scheme opens
         end = max(end, dt.date.fromisoformat(max(r["week"] for r in rows)))
@@ -92,7 +92,9 @@ def weeks_from(rows: list[dict], ledger: dict) -> list[dict]:
             s["points"] += r["points"]
         entry = {
             "monday": key, "label": week_label(monday),
-            "status": "paid" if key in paid else ("current" if monday == end else "owed"),
+            # a complete week that earned nothing is "empty": neither owed nor waiting to be paid
+            "status": "paid" if key in paid else ("current" if monday == end else
+                                                 ("owed" if rates.pence(capped) else "empty")),
             "points": round(pts, 3), "points_paid_for": round(capped, 3), "capped": capped < pts,
             "pence": rates.pence(capped), "activities": [r["id"] for r in acts],
             "n_activities": len(acts), "n_flagged": sum(1 for r in acts if r["flags"] and not r["excluded"]),
@@ -113,6 +115,12 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
     overrides = store.overrides() if overrides is None else overrides
     rows = scored_activities(activities, overrides.get("exclude", {}))
     weeks = weeks_from(rows, ledger)
+    won = milestones.achieved(rows)
+    by_week_won: dict[str, list] = {}
+    for m in won:
+        by_week_won.setdefault(week_for(m["date"]).isoformat(), []).append(m)
+    for w in weeks:
+        w["milestones"] = [{"key": m["key"], "title": m["title"]} for m in by_week_won.get(w["monday"], [])]
     paid_pence = sum(w["pence"] for w in weeks if w["status"] == "paid")
     owed_pence = sum(w["pence"] for w in weeks if w["status"] == "owed")
     current = next((w for w in weeks if w["status"] == "current"), None)
@@ -137,6 +145,9 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
         },
         "weeks": weeks,
         "activities": rows,
+        # the Easter eggs: only the WON ones leave the server; the rest are a number
+        "milestones": {"won": list(reversed(won)), "hidden": len(milestones.MILESTONES) - len(won),
+                       "total": len(milestones.MILESTONES)},
     }
 
 
@@ -193,7 +204,7 @@ def selftest() -> None:
          "distance_m": 16093.44, "ascent_m": 0, "duration_s": 600, "avg_hr": 90, "avg_speed_mps": 26.8},
         {"id": 4, "name": "PE", "sport": "other", "type_key": "football", "start_local": "2026-09-29 12:00:00",
          "distance_m": 3000, "ascent_m": 0, "duration_s": 3600, "avg_hr": 140, "avg_speed_mps": 1.0},
-        {"id": 5, "name": "Old", "sport": "run", "type_key": "running", "start_local": "2026-09-13 16:00:00",
+        {"id": 5, "name": "Old", "sport": "run", "type_key": "running", "start_local": "2026-04-30 16:00:00",
          "distance_m": 5000, "ascent_m": 0, "duration_s": 1500, "avg_hr": 150, "avg_speed_mps": 3.3},
     ]
     ledger = {"weeks": {"2026-09-21": {"paid_on": "2026-09-28"}}}
@@ -210,8 +221,13 @@ def selftest() -> None:
     assert w1["status"] == "paid" and w1["points"] == 16.0 and w1["pence"] == 400 and w1["paid_on"] == "2026-09-28"
     assert w2["points"] == 0.0 and w2["n_flagged"] == 1, w2      # id 3 is struck, id 4 still flagged
     assert d["totals"]["paid_pence"] == 400
+    won = {m["key"]: m for m in d["milestones"]["won"]}
+    assert {"first", "first_run", "run_1mi", "first_cycle", "cycle_5mi", "cycle_10mi", "climb_100"} <= set(won), won.keys()
+    assert "pace_10" in won and "pace_9" not in won and won["run_1mi"]["date"] == "2026-09-22"   # 2.7 m/s = 9.9 min/mi
+    assert d["milestones"]["hidden"] == d["milestones"]["total"] - len(won)
+    assert [m["title"] for m in weeks["2026-09-21"]["milestones"]] and weeks["2026-09-28"]["milestones"] == []
     assert d["weeks"][0]["monday"] == max(this_week(), dt.date(2026, 9, 28)).isoformat()
-    assert d["weeks"][-1]["monday"] == rates.SCHEME_START.isoformat()
+    assert d["weeks"][-1]["monday"] == week_of(rates.SCHEME_START).isoformat()
     # the cap
     old = rates.WEEK_CAP_POINTS
     rates.WEEK_CAP_POINTS = 10.0

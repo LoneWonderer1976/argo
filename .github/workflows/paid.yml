@@ -1,0 +1,44 @@
+# Ben's reply on a statement issue -- "paid", "paid all", "strike <id> reason", "unstrike <id>" --
+# becomes the ledger write, a confirming comment, and (on paid) the issue closing. Only the
+# repository's owner or a collaborator is listened to; the argo bot's own comments are ignored.
+name: paid
+on:
+  issue_comment:
+    types: [created]
+concurrency: { group: argo-data, cancel-in-progress: false }
+permissions: { contents: write, issues: write }
+jobs:
+  paid:
+    if: >-
+      startsWith(github.event.issue.title, 'Argo statement:') &&
+      github.event.comment.user.type != 'Bot' &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: read the reply
+        env:
+          ISSUE_BODY: "${{ github.event.issue.body }}"
+          COMMENT: "${{ github.event.comment.body }}"
+        run: |
+          printf '%s' "$ISSUE_BODY" > issue.md
+          printf '%s' "$COMMENT" > comment.md
+          python -m argo.reply --issue-body issue.md --comment comment.md --apply | tee reply.txt
+          python -m argo.score --print
+      - name: commit
+        run: |
+          git config user.name "argo"
+          git config user.email "argo@users.noreply.github.com"
+          git add data docs
+          git diff --cached --quiet && echo "nothing changed" || git commit -m "reply on #${{ github.event.issue.number }}: $(head -c 60 comment.md | head -1)" -q
+          git push
+      - name: answer
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          N: "${{ github.event.issue.number }}"
+        run: |
+          grep -v '^CLOSE$' reply.txt > answer.md
+          gh issue comment "$N" --body-file answer.md
+          if grep -qx 'CLOSE' reply.txt; then gh issue close "$N"; fi

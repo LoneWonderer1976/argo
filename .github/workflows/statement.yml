@@ -1,4 +1,6 @@
-# Sunday night: the week's statement to Ben. Syncs first so a Sunday-afternoon ride is on it.
+# Sunday night: the week's statement to Ben, as a GitHub ISSUE -- GitHub emails him about it like
+# any issue, and his reply of "paid" (from the email or on the issue) settles the week (paid.yml).
+# Nothing to configure. If the SMTP secrets are set as well, a proper email goes out too.
 name: statement
 on:
   schedule:
@@ -9,7 +11,7 @@ on:
         description: "Monday of the week to send (blank = last completed week)"
         required: false
 concurrency: { group: argo-data, cancel-in-progress: false }
-permissions: { contents: write }
+permissions: { contents: write, issues: write }
 jobs:
   statement:
     runs-on: ubuntu-latest
@@ -18,7 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r requirements.txt
-      - name: sync from Garmin
+      - name: sync from Garmin first, so a Sunday-afternoon ride is on the statement
         env: { GARMINTOKENS: "${{ secrets.GARMINTOKENS }}" }
         run: python -m argo.sync
       - name: score and build the page
@@ -30,7 +32,15 @@ jobs:
           git add data docs
           git diff --cached --quiet || git commit -m "sync before the statement" -q
           git push
-      - name: send the statement
+      - name: open the statement issue
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          PAGE_URL: "${{ vars.PAGE_URL }}"
+        run: |
+          TITLE=$(python -m argo.statement --issue-file body.md ${{ inputs.week && format('--week {0}', inputs.week) || '' }})
+          gh issue create --title "$TITLE" --body-file body.md
+      - name: and an email, if SMTP is set up
+        if: ${{ secrets.SMTP_USER != '' }}
         env:
           SMTP_HOST: "${{ secrets.SMTP_HOST }}"
           SMTP_PORT: "${{ secrets.SMTP_PORT }}"
@@ -38,5 +48,5 @@ jobs:
           SMTP_PASS: "${{ secrets.SMTP_PASS }}"
           MAIL_TO: "${{ secrets.MAIL_TO }}"
           PAGE_URL: "${{ vars.PAGE_URL }}"
-          PAY_URL: "${{ github.server_url }}/${{ github.repository }}/actions/workflows/pay.yml"
+          PAY_URL: "${{ github.server_url }}/${{ github.repository }}/issues"
         run: python -m argo.statement ${{ inputs.week && format('--week {0}', inputs.week) || '' }}

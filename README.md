@@ -1,47 +1,50 @@
 # ⛵ Argo
 
-Pocket money for getting out. A Garmin watch records the activity, Argo turns it into points at
-the rates in [`argo/rates.py`](argo/rates.py), the points into pence, and the week into a statement
-for Dad. His page shows what he has earned so far this week, what is owed, and what has been paid.
+Pocket money for getting out. Thomas's Garmin watch records the activity, Argo turns it into
+points at the rates in [`argo/rates.py`](argo/rates.py), the points into pence, and the week into
+a statement for Dad. His page shows what he has earned so far this week, what is owed, what has
+been paid — and the Easter eggs he has found (111 hidden milestones, each with its own message).
 
 Nothing runs anywhere but GitHub: an Action syncs from Garmin every hour and publishes the page
-to GitHub Pages; another sends the Sunday statement; a third is the **Pay** button. The data is
-JSON in this repo, so every payment is a commit.
+to GitHub Pages; another opens the Sunday statement as an issue (GitHub emails it to you); your
+reply of **paid** settles the week. The data is JSON in this repo, so every payment is a commit.
 
-## One-time setup (Ben)
+## Setting it up — two things are yours, everything else is scripted
 
-1. **Create the GitHub repository** — private is fine — and push this folder to it:
+1. **Log the GitHub CLI in** (installed already), once, in a terminal — it opens the browser:
    ```bash
-   git remote add origin https://github.com/<you>/argo.git && git push -u origin main
+   gh auth login --web
    ```
-2. **Garmin tokens.** On the PC, once:
+2. **Run the setup.** Creates the private repo `<you>/argo` from this folder, pushes it, switches
+   on Pages, sets the page address, and tells you what is left:
    ```bash
-   pip install garminconnect && python -m argo.login
+   python setup.py
    ```
-   It asks for the Garmin Connect email and password of the account the watch syncs to (and
-   an MFA code if the account has one), then prints a long token string. Paste that into
-   **Settings → Secrets and variables → Actions → New repository secret** named `GARMINTOKENS`.
-   The tokens last about a year; when the sync Action starts failing to log in, run it again.
-3. **The page.** Settings → Pages → *Deploy from a branch* → branch `main`, folder `/docs`.
-   The address is `https://<you>.github.io/argo/`; add it as a repository **variable** named
-   `PAGE_URL` (Settings → Secrets and variables → Actions → Variables) so the email can link it.
-   On his phone, open the address and *Add to Home Screen* — it installs as an app.
-4. **The email.** Five secrets: `SMTP_USER` (the Gmail address it sends from), `SMTP_PASS` (a
-   Gmail **App Password** — Google account → Security → 2-Step Verification → App passwords; never
-   the account password), `MAIL_TO` (where the statement goes), and optionally `SMTP_HOST` /
-   `SMTP_PORT` if not Gmail (defaults `smtp.gmail.com` / `587`).
-5. **Run it once by hand:** Actions → *sync* → Run workflow. A green run and a commit called
-   `sync …` means it is working; the page updates a minute later.
+3. **Log Thomas's Garmin in**, once — it asks for the email and password of the account his watch
+   syncs to (and an MFA code if there is one), stores the tokens as the `GARMINTOKENS` secret,
+   starts the first sync on GitHub and fetches his activities here too:
+   ```bash
+   python -m argo.login
+   ```
+   The tokens last about a year; when the *sync* Action starts failing to log in, run it again.
+
+Then open `https://<you>.github.io/argo/` on his phone and *Add to Home Screen*.
+
+The sync runs hourly from then on. Everything since **1 May 2026** is fetched and scored, so the
+first statement will show a backlog of owed weeks: reply **paid all** to it to settle them in one go.
 
 ## The week
 
 - Monday to Sunday, UK time. The scheme opens on `SCHEME_START` (rates.py); nothing before it counts.
-- **Sunday night** the statement arrives: every activity, its points, anything flagged
-  (implausible speed, no heart rate, an unscored sport), the week's money and the running total owed.
-- **Pay:** the email's link opens the *pay* workflow — *Run workflow*, leave the fields blank, and
-  the oldest unpaid week is marked paid today. His page moves it from *owed* to *paid*.
-- **Strike:** the same form with an activity id in *strike* (ids are in the email and on the page)
-  removes it from scoring, with the reason shown on his page. *unstrike* undoes it.
+- **Sunday night** a statement issue opens and GitHub emails it to you: every activity, its
+  points, anything flagged (implausible speed, no heart rate, an unscored sport), the eggs found,
+  the week's money and the running total owed.
+- **Pay:** reply to the email (or comment on the issue) with **paid** — the week is marked paid,
+  the issue closes, his page moves it from *owed* to *paid*. **paid all** settles every unpaid week
+  up to that one. A word after it (**paid cash**) is kept as a note.
+- **Strike:** reply **strike `<id>` the reason** (ids are in the statement's table) and the
+  activity earns nothing, with the reason shown on his page; **unstrike `<id>`** undoes it. Then **paid**.
+- The *pay* workflow (Actions tab → *pay* → Run workflow) does the same from a form, if you prefer.
 
 ## On the PC
 
@@ -55,4 +58,5 @@ python -m argo.demo             # a made-up data.json to look at the page before
 ```
 
 Scripts that write are dry-run by default and take `--apply`. The design log is
-[`ARGO_BRIEF.md`](ARGO_BRIEF.md).
+[`ARGO_BRIEF.md`](ARGO_BRIEF.md). An email statement over SMTP is also there if ever wanted
+(`argo/statement.py`'s docstring has the five secrets); the issue route needs nothing.

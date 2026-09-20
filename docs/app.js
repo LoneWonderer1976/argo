@@ -26,17 +26,64 @@
     $("total-gbp").textContent = gbp(t.pence);
     const b = new Date(DATA.built_at);
     $("updated").textContent = "updated " + b.toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+    renderTrophies();
     renderWeeks();
     renderActivities();
     renderSports();
     renderRates();
+    celebrate();
   }
+
+  /* --- the Easter eggs. data.json carries only the ones already won; the rest are a number. ---
+     Which ones THIS phone has already celebrated lives in localStorage (a per-viewer convenience:
+     if it is wiped he gets the fanfare again, which is hardly a punishment). */
+  const SEEN_KEY = "argo.eggs.seen";
+  const seen = () => { try { return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || "[]")); } catch (e) { return new Set(); } };
+  const markSeen = (keys) => { try { localStorage.setItem(SEEN_KEY, JSON.stringify([...keys])); } catch (e) { /* private mode */ } };
+
+  function renderTrophies() {
+    const m = DATA.milestones || { won: [], hidden: 0, total: 0 };
+    $("trophy-count").textContent = `${m.won.length} of ${m.total}`;
+    const cards = m.won.map((w) => `<div class="trophy" data-key="${w.key}"><div class="t-title">🏆 ${esc(w.title)}</div><div class="t-date">${w.date.slice(8, 10)}/${w.date.slice(5, 7)}/${w.date.slice(0, 4)}</div></div>`);
+    const locked = Math.min(m.hidden, 3);
+    for (let i = 0; i < locked; i++) cards.push(`<div class="trophy locked" title="still hidden">🥚</div>`);
+    $("trophies").innerHTML = cards.join("");
+    $("hidden-note").textContent = m.hidden ? `${m.hidden} Easter egg${m.hidden === 1 ? "" : "s"} still hidden. Keep going to find them.` : "You have found every single one. Thomas, that is astonishing.";
+    $("trophies").querySelectorAll(".trophy[data-key]").forEach((el) => el.addEventListener("click", () => showEgg(m.won.find((w) => w.key === el.dataset.key), false)));
+  }
+
+  let eggQueue = [];
+  function celebrate() {
+    const m = DATA.milestones || { won: [] };
+    const done = seen();
+    const fresh = m.won.filter((w) => !done.has(w.key)).sort((a, b) => a.date < b.date ? -1 : 1);
+    if (!fresh.length) return;
+    // first load on a new phone with a long history: don't replay months of eggs one by one
+    if (done.size === 0 && fresh.length > 5) { markSeen(new Set(m.won.map((w) => w.key))); return; }
+    eggQueue = fresh;
+    nextEgg();
+  }
+  function nextEgg() {
+    const w = eggQueue.shift();
+    if (!w) { $("egg").hidden = true; return; }
+    showEgg(w, true);
+  }
+  function showEgg(w, isNew) {
+    if (!w) return;
+    $("egg-title").textContent = w.title;
+    $("egg-message").textContent = w.message;
+    $("egg-date").textContent = (isNew ? "Earned " : "Found ") + w.date.slice(8, 10) + "/" + w.date.slice(5, 7) + "/" + w.date.slice(0, 4);
+    $("egg-next").textContent = eggQueue.length ? "Next one! →" : "Brilliant!";
+    $("egg").hidden = false;
+    if (isNew) { const s = seen(); s.add(w.key); markSeen(s); }
+  }
+  $("egg-next").addEventListener("click", nextEgg);
 
   function renderWeeks() {
     const weeks = DATA.weeks.slice(0, 12);
     const box = $("weeks");
     box.innerHTML = weeks.map((w) => `
-      <div class="week">
+      <div class="week ${w.status}">
         <span class="pill ${w.status}">${w.status}</span>
         <span class="label">${esc(w.label)}<div class="n">${w.n_activities} activit${w.n_activities === 1 ? "y" : "ies"} · ${w.points.toFixed(1)} pts${w.capped ? " · capped" : ""}${w.paid_on ? " · paid " + w.paid_on : ""}</div></span>
         <span class="gbp">${gbp(w.pence)}</span>

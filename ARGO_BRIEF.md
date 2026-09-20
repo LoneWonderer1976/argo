@@ -87,6 +87,48 @@ account). It reloads `data.json` whenever the app comes back to the foreground. 
 icons make it installable from the browser's *Add to Home Screen*. No service worker on purpose:
 a cached `data.json` is the opposite of real time.
 
+## The same evening: backdated, the Easter eggs, and GitHub as the postman (20/09/2026)
+
+Ben: *"I'd like to backdate activities to 1st May and hide some Easter eggs, motivational
+messages that appear when he achieves a milestone, his name is Thomas, milestones might be 10
+mile cycle, 2 mile run, 5 mile walk, would like loads and each to have a unique message, I'd also
+like you to do as many of the steps as you can before I do anything manually."*
+
+- **`SCHEME_START` = 1 May 2026**, a Friday; the ledger's first week is the Monday before it (27
+  April) and holds only what happened from the 1st. A complete week that earned nothing is now
+  **empty** rather than *owed* — twenty £0.00 weeks marked OWED before the first sync would have
+  been noise — and `pay --through` / a reply of **paid all** settle a backlog in one go, since
+  the first statement will carry five months of owed weeks.
+- **The Easter eggs are `argo/milestones.py`: 111 of them, each a rule and a message written for
+  the moment**, for Thomas by name where it reads naturally. Kinds: one activity's distance or
+  climb, all-time distance and climb, money, counts, a week's count, week streaks, pace, time of
+  day, time on feet, a weekend double, three sports in a week, all five sports. The ladders sit
+  on real things — Hadrian's Wall, the South Downs Way, Land's End to John o' Groats, the
+  Channel, Snowdon / Ben Nevis / Mont Blanc / Everest, round the Isle of Wight — and the money
+  eggs on the voyage (the £100 one is the Golden Fleece). Each is won by the FIRST activity that
+  crosses it and dated to that day; it is evaluated afresh on every run, so a strike can take
+  one back and a rate change can move the money ones, exactly as the ledger moves.
+- **Hidden means hidden.** `data.json` carries only the WON eggs; the rest are a count. The page
+  shows a trophy cabinet of the won ones (tap one to read it again), three 🥚 for what is still
+  hidden, and the number. A newly-won egg gets a full-screen fanfare when the page is next
+  opened — which ones this phone has already celebrated is `localStorage`, a per-viewer
+  convenience; a wiped phone replays them, which is hardly a punishment. A phone opening the
+  page for the first time against a long history is NOT made to sit through months of fanfares:
+  more than five unseen at once are marked seen silently and live in the cabinet.
+- **GitHub is the postman.** The Sunday statement is a GitHub ISSUE, not an email: GitHub emails
+  the repository's owner about every issue anyway, so the statement arrives in Ben's inbox with
+  no mail account, no app password, nothing to configure. And a reply to that email lands on the
+  issue as a comment, so **`paid.yml` reads the first line of any comment by the owner** —
+  *paid*, *paid all*, *strike <id> reason*, *unstrike <id>* — makes the write, answers on the
+  issue and closes it. `argo/reply.py` is the parser; a refusal from `pay.py` (the week is not
+  over) is posted as the answer rather than failing the run. SMTP stays as an optional extra.
+- **The setup is two commands that need Ben and one that does not.** `gh auth login --web` (his
+  GitHub, his browser), `python -m argo.login` (Thomas's Garmin password, typed by Ben, stored
+  nowhere — the script sets the `GARMINTOKENS` secret through `gh` itself and starts the first
+  sync), and `python setup.py` between them, which creates the private repo, pushes, switches on
+  Pages and sets `PAGE_URL`. The GitHub CLI was installed with winget for this. Nothing else
+  is manual.
+
 ## Not built, deliberately
 
 - **Screen time.** Ben: *"or possibly screentime or both"*. Points are the currency; a second

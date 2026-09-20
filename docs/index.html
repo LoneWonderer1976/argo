@@ -32,6 +32,12 @@
 </header>
 
 <main>
+  <section id="trophies-section">
+    <h2>Trophies <span id="trophy-count" class="muted"></span></h2>
+    <div id="trophies" class="trophies"></div>
+    <p id="hidden-note" class="muted small"></p>
+  </section>
+
   <section>
     <h2>Weeks</h2>
     <div class="chart-wrap"><canvas id="weeks-chart" height="160"></canvas></div>
@@ -55,6 +61,17 @@
     <p class="muted small" id="rates-note"></p>
   </section>
 </main>
+
+<div id="egg" class="egg" hidden>
+  <div class="egg-inner">
+    <div class="egg-burst">🏆</div>
+    <div class="egg-kicker">You found an Easter egg!</div>
+    <div id="egg-title" class="egg-title"></div>
+    <div id="egg-message" class="egg-message"></div>
+    <div id="egg-date" class="muted small"></div>
+    <button id="egg-next" class="egg-btn">Brilliant!</button>
+  </div>
+</div>
 
 <div id="sheet" class="sheet" hidden>
   <div class="sheet-inner">

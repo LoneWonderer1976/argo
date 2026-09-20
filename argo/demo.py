@@ -35,7 +35,8 @@ def main() -> None:
                      "avg_speed_mps": round(speed * (5 if i == 11 else 1), 2)})
     for a in acts:
         a["_track"] = _track(50.92 + rnd.uniform(-.02, .02), -1.29 + rnd.uniform(-.02, .02)) if a["sport"] not in ("swim", "other") else None
-    ledger = {"weeks": {rates.SCHEME_START.isoformat(): {"paid_on": (rates.SCHEME_START + dt.timedelta(days=7)).isoformat()}}}
+    first = rates.SCHEME_START - dt.timedelta(days=rates.SCHEME_START.weekday())
+    ledger = {"weeks": {first.isoformat(): {"paid_on": (first + dt.timedelta(days=7)).isoformat()}}}
     real_has_track = store.has_track
     store.has_track = lambda i: any(a["id"] == i and a["_track"] for a in acts)
     try:
