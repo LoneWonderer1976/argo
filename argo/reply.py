@@ -10,6 +10,7 @@ notification email lands here too) is read for its FIRST non-empty line:
     paid cash / paid bank     the same, with the word kept as the note
     strike 12345678 the car   strike that activity (it earns nothing; the reason shows on his page)
     unstrike 12345678         put it back
+    sport 12345678 kayak      the watch said "other"; this is what it was
 
 Anything else is ignored with a polite note. The result goes to stdout for the workflow to post
 back as a comment; "CLOSE" on the last line tells it to close the issue.
@@ -65,10 +66,16 @@ def _handle(issue_body: str, comment: str, apply: bool) -> str:
         data = score.build()
         w = next(x for x in data["weeks"] if x["monday"] == week)
         return f"Struck {rest[0]}. {w['label']} is now {w['points']:.1f} pts = {rates.gbp(w['pence'])}. Reply **paid** when ready."
+    if verb == "sport" and len(rest) >= 2:
+        pay.relabel(rest[0], rest[1].lower(), apply)
+        data = score.build()
+        w = next(x for x in data["weeks"] if x["monday"] == week)
+        return f"{rest[0]} is now a {rest[1].lower()}. {w['label']} is now {w['points']:.1f} pts = {rates.gbp(w['pence'])}. Reply **paid** when ready."
     if verb == "unstrike" and rest:
         pay.unstrike(rest[0], apply)
         return f"Un-struck {rest[0]}; it scores again. Reply **paid** when ready."
-    return "I read replies that start with **paid**, **paid all**, **strike `<id>` reason** or **unstrike `<id>`** -- nothing done."
+    return ("I read replies that start with **paid**, **paid all**, **strike `<id>` reason**, **unstrike `<id>`** "
+            "or **sport `<id>` run|walk|cycle|swim|kayak** -- nothing done.")
 
 
 def selftest() -> None:

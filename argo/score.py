@@ -43,11 +43,16 @@ def flags_for(row: dict) -> list[str]:
     return out
 
 
-def scored_activities(activities: list[dict], excluded: dict) -> list[dict]:
+def scored_activities(activities: list[dict], excluded: dict, relabel: dict | None = None) -> list[dict]:
+    """`relabel` is overrides["sport"]: Ben's word on what an activity was when the watch said
+    "other" (a kayak logged as Other, 20/09/2026). Applied before pricing and before the flags."""
     out = []
+    relabel = relabel or {}
     for a in activities:
         if not a.get("start_local"):
             continue
+        if str(a["id"]) in relabel:
+            a = {**a, "sport": relabel[str(a["id"])], "relabelled": True}
         day = dt.date.fromisoformat(a["start_local"][:10])
         if day < rates.SCHEME_START:
             continue
@@ -63,6 +68,7 @@ def scored_activities(activities: list[dict], excluded: dict) -> list[dict]:
             "points": round(total, 3), "points_distance": round(pts["distance"], 3), "points_ascent": round(pts["ascent"], 3),
             "pence_share": rates.pence(total),
             "flags": flags_for(a), "excluded": ex, "has_track": store.has_track(a["id"]),
+            "relabelled": bool(a.get("relabelled")),
         })
     return out
 
@@ -113,7 +119,7 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
     activities = store.activities() if activities is None else activities
     ledger = store.ledger() if ledger is None else ledger
     overrides = store.overrides() if overrides is None else overrides
-    rows = scored_activities(activities, overrides.get("exclude", {}))
+    rows = scored_activities(activities, overrides.get("exclude", {}), overrides.get("sport", {}))
     weeks = weeks_from(rows, ledger)
     won = milestones.achieved(rows)
     by_week_won: dict[str, list] = {}
@@ -209,6 +215,9 @@ def selftest() -> None:
          "distance_m": 5000, "ascent_m": 0, "duration_s": 1500, "avg_hr": 150, "avg_speed_mps": 3.3},
     ]
     ledger = {"weeks": {"2026-09-21": {"paid_on": "2026-09-28"}}}
+    d = build(acts, ledger, {"exclude": {"3": "that was the car"}, "sport": {"4": "kayak"}})
+    rows = {r["id"]: r for r in d["activities"]}
+    assert rows[4]["sport"] == "kayak" and rows[4]["points"] > 0 and rows[4]["relabelled"] and rows[4]["flags"] == []
     d = build(acts, ledger, {"exclude": {"3": "that was the car"}})
     rows = {r["id"]: r for r in d["activities"]}
     assert 5 not in rows, "before SCHEME_START must not score"

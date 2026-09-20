@@ -3,7 +3,7 @@
     data/activities/<id>.json   one per Garmin activity: Argo's fields + the raw summary, kept whole
     data/tracks/<id>.json       the activity's line, thinned for a phone map (lat/lon pairs)
     data/ledger.json            the weeks Ben has marked PAID  {"weeks": {"2026-09-21": {"paid_on": ..}}}
-    data/overrides.json         Ben's strikes  {"exclude": {"<id>": "reason"}}
+    data/overrides.json         Ben's strikes and relabels  {"exclude": {"<id>": "reason"}, "sport": {"<id>": "kayak"}}
 
 Plain JSON in git: every change is a commit, every mistake has an undo, and GitHub Actions can
 read and write it with nothing installed. An activity file is written once and never edited
@@ -65,7 +65,10 @@ def write_ledger(obj: dict) -> None:
 
 
 def overrides() -> dict:
-    return _read(OVERRIDES, {"exclude": {}})
+    ov = _read(OVERRIDES, {})
+    ov.setdefault("exclude", {})
+    ov.setdefault("sport", {})
+    return ov
 
 
 def write_overrides(obj: dict) -> None:

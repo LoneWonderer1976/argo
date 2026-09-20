@@ -7,6 +7,7 @@
     python -m argo.pay --undo --week 2026-09-21 --apply
     python -m argo.pay --strike 12345678 --reason "that was the car" --apply
     python -m argo.pay --unstrike 12345678 --apply
+    python -m argo.pay --sport 12345678 kayak --apply    # the watch said "other"; Ben says what it was
 
 Dry-run by default; --apply writes. The Pay workflow in GitHub Actions runs exactly these with
 --apply, from the inputs on its "Run workflow" form, then re-scores and commits -- so the ledger
@@ -80,6 +81,18 @@ def strike(activity_id: str, reason: str | None, apply: bool) -> None:
         store.write_overrides(ov)
 
 
+def relabel(activity_id: str, sport: str, apply: bool) -> None:
+    if sport not in rates.SPORTS:
+        raise SystemExit(f"'{sport}' is not one of {', '.join(rates.SPORTS)}")
+    if not (store.ACTS / f"{activity_id}.json").exists():
+        raise SystemExit(f"no activity {activity_id} in data/activities")
+    ov = store.overrides()
+    print(f"{'RELABEL' if apply else 'would relabel'} {activity_id} as {sport}")
+    if apply:
+        ov["sport"][str(activity_id)] = sport
+        store.write_overrides(ov)
+
+
 def unstrike(activity_id: str, apply: bool) -> None:
     ov = store.overrides()
     if str(activity_id) not in ov["exclude"]:
@@ -99,9 +112,12 @@ def main() -> None:
     ap.add_argument("--strike", metavar="ID", help="exclude an activity from scoring")
     ap.add_argument("--reason")
     ap.add_argument("--unstrike", metavar="ID")
+    ap.add_argument("--sport", nargs=2, metavar=("ID", "SPORT"), help="relabel an activity's sport")
     ap.add_argument("--apply", action="store_true")
     a = ap.parse_args()
-    if a.strike:
+    if a.sport:
+        relabel(a.sport[0], a.sport[1], a.apply)
+    elif a.strike:
         strike(a.strike, a.reason, a.apply)
     elif a.unstrike:
         unstrike(a.unstrike, a.apply)

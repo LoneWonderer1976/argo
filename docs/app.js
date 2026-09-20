@@ -153,7 +153,8 @@
       [a.sport === "swim" ? km(a.distance_m) : mi(a.distance_m), "distance"], [Math.round(a.ascent_m || 0) + " m", "climb"], [dur(a.duration_s), "time"],
       [a.points.toFixed(1), "points"], [gbp(a.pence_share), "earned"], [a.avg_hr ? Math.round(a.avg_hr) + " bpm" : "—", "avg HR"],
     ].map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join("");
-    $("sheet-flags").innerHTML = (a.excluded ? [`<div class="flag">Struck: ${esc(a.excluded)}</div>`] : a.flags.map((f) => `<div class="flag">⚠ ${esc(f)}</div>`)).join("");
+    $("sheet-flags").innerHTML = (a.excluded ? [`<div class="flag">Struck: ${esc(a.excluded)}</div>`] : a.flags.map((f) => `<div class="flag">⚠ ${esc(f)}</div>`))
+      .concat(a.relabelled ? [`<div class="flag">The watch called this "${esc(a.type_key)}" — Dad says ${esc(a.sport)}.</div>`] : []).join("");
     $("sheet").hidden = false;
     const mapEl = $("map");
     mapEl.hidden = !a.has_track;

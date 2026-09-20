@@ -121,7 +121,7 @@ def compose_markdown(data: dict, monday: dt.date) -> tuple[str, str]:
         lines += ["", "🏆 **Easter eggs found this week:** " + ", ".join(m["title"] for m in week["milestones"])]
     lines += ["", f"**Owed in total: {rates.gbp(owed)}** (every unpaid week)", "",
               "Reply **paid** to mark this week paid. Reply **strike `<id>` reason** to remove an activity from "
-              "scoring first, then **paid**." + (f" [His page]({page})." if page else "")]
+              "scoring first, or **sport `<id>` kayak** to relabel one the watch called *other*, then **paid**." + (f" [His page]({page})." if page else "")]
     return title, "\n".join(lines) + "\n"
 
 
