@@ -44,6 +44,9 @@
 
   function renderTrophies() {
     const m = DATA.milestones || { won: [], hidden: 0, total: 0 };
+    // Ben, 20/09: the whole panel stays hidden until the first egg is won -- the first one is the surprise
+    $("trophies-section").hidden = m.won.length === 0;
+    if (!m.won.length) return;
     $("trophy-count").textContent = `${m.won.length} of ${m.total}`;
     const cards = m.won.map((w) => `<div class="trophy" data-key="${w.key}"><div class="t-title">🏆 ${esc(w.title)}</div><div class="t-date">${w.date.slice(8, 10)}/${w.date.slice(5, 7)}/${w.date.slice(0, 4)}</div></div>`);
     const locked = Math.min(m.hidden, 3);

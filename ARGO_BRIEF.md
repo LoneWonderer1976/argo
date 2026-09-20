@@ -108,7 +108,7 @@ like you to do as many of the steps as you can before I do anything manually."*
   eggs on the voyage (the £100 one is the Golden Fleece). Each is won by the FIRST activity that
   crosses it and dated to that day; it is evaluated afresh on every run, so a strike can take
   one back and a rate change can move the money ones, exactly as the ledger moves.
-- **Hidden means hidden.** `data.json` carries only the WON eggs; the rest are a count. The page
+- **Hidden means hidden.** The whole Trophies panel is absent from the page until the first egg is won (Ben, 20/09: *"so it is a surprise"*) — the first fanfare is the first he hears of them. `data.json` carries only the WON eggs; the rest are a count. The page
   shows a trophy cabinet of the won ones (tap one to read it again), three 🥚 for what is still
   hidden, and the number. A newly-won egg gets a full-screen fanfare when the page is next
   opened — which ones this phone has already celebrated is `localStorage`, a per-viewer
