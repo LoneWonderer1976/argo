@@ -1,0 +1,42 @@
+# Sunday night: the week's statement to Ben. Syncs first so a Sunday-afternoon ride is on it.
+name: statement
+on:
+  schedule:
+    - cron: "45 20 * * 0"        # Sunday 20:45 UTC = 21:45 BST / 20:45 GMT
+  workflow_dispatch:
+    inputs:
+      week:
+        description: "Monday of the week to send (blank = last completed week)"
+        required: false
+concurrency: { group: argo-data, cancel-in-progress: false }
+permissions: { contents: write }
+jobs:
+  statement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - name: sync from Garmin
+        env: { GARMINTOKENS: "${{ secrets.GARMINTOKENS }}" }
+        run: python -m argo.sync
+      - name: score and build the page
+        run: python -m argo.score
+      - name: commit what changed
+        run: |
+          git config user.name "argo"
+          git config user.email "argo@users.noreply.github.com"
+          git add data docs
+          git diff --cached --quiet || git commit -m "sync before the statement" -q
+          git push
+      - name: send the statement
+        env:
+          SMTP_HOST: "${{ secrets.SMTP_HOST }}"
+          SMTP_PORT: "${{ secrets.SMTP_PORT }}"
+          SMTP_USER: "${{ secrets.SMTP_USER }}"
+          SMTP_PASS: "${{ secrets.SMTP_PASS }}"
+          MAIL_TO: "${{ secrets.MAIL_TO }}"
+          PAGE_URL: "${{ vars.PAGE_URL }}"
+          PAY_URL: "${{ github.server_url }}/${{ github.repository }}/actions/workflows/pay.yml"
+        run: python -m argo.statement ${{ inputs.week && format('--week {0}', inputs.week) || '' }}

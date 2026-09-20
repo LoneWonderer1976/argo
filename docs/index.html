@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f2a44">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Argo">
+<title>Argo</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="hero">
+  <div class="hero-top">
+    <h1>⛵ Argo</h1>
+    <span id="updated" class="muted"></span>
+  </div>
+  <div class="hero-main">
+    <div class="big" id="week-gbp">£0.00</div>
+    <div class="big-label">this week so far</div>
+  </div>
+  <div class="hero-row">
+    <div><div class="stat" id="owed-gbp">£0.00</div><div class="stat-label">owed</div></div>
+    <div><div class="stat" id="paid-gbp">£0.00</div><div class="stat-label">paid</div></div>
+    <div><div class="stat" id="total-gbp">£0.00</div><div class="stat-label">earned ever</div></div>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2>Weeks</h2>
+    <div class="chart-wrap"><canvas id="weeks-chart" height="160"></canvas></div>
+    <div id="weeks" class="weeks"></div>
+  </section>
+
+  <section>
+    <h2>Activities</h2>
+    <div id="activities" class="cards"></div>
+    <p id="empty" class="muted" hidden>Nothing yet — go and do something!</p>
+  </section>
+
+  <section>
+    <h2>Totals</h2>
+    <table id="sports" class="table"><thead><tr><th>sport</th><th>times</th><th>distance</th><th>climb</th><th>points</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section>
+    <h2>How it pays</h2>
+    <table id="rates" class="table"><tbody></tbody></table>
+    <p class="muted small" id="rates-note"></p>
+  </section>
+</main>
+
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-inner">
+    <button class="close" id="sheet-close" aria-label="close">✕</button>
+    <div id="sheet-title" class="sheet-title"></div>
+    <div id="sheet-sub" class="muted"></div>
+    <div id="sheet-stats" class="sheet-stats"></div>
+    <div id="map" class="map" hidden></div>
+    <div id="sheet-flags" class="flags"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+# Ben's button. "Run workflow" on this page marks a week paid (or strikes an activity), then re-scores.
+name: pay
+on:
+  workflow_dispatch:
+    inputs:
+      week:
+        description: "Monday of the week paid (blank = the oldest unpaid week)"
+        required: false
+      note:
+        description: "optional note, e.g. 'cash' or 'bank'"
+        required: false
+      strike:
+        description: "INSTEAD: strike an activity by its id (it earns nothing)"
+        required: false
+      reason:
+        description: "why it is struck (shown on his page)"
+        required: false
+      unstrike:
+        description: "INSTEAD: un-strike an activity by its id"
+        required: false
+concurrency: { group: argo-data, cancel-in-progress: false }
+permissions: { contents: write }
+jobs:
+  pay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: apply
+        env:
+          WEEK: "${{ inputs.week }}"
+          NOTE: "${{ inputs.note }}"
+          STRIKE: "${{ inputs.strike }}"
+          REASON: "${{ inputs.reason }}"
+          UNSTRIKE: "${{ inputs.unstrike }}"
+        run: |
+          if [ -n "$STRIKE" ]; then
+            python -m argo.pay --strike "$STRIKE" --reason "${REASON:-struck by Dad}" --apply
+          elif [ -n "$UNSTRIKE" ]; then
+            python -m argo.pay --unstrike "$UNSTRIKE" --apply
+          else
+            python -m argo.pay ${WEEK:+--week "$WEEK"} ${NOTE:+--note "$NOTE"} --apply
+          fi
+          python -m argo.score --print
+      - name: commit
+        run: |
+          git config user.name "argo"
+          git config user.email "argo@users.noreply.github.com"
+          git add data docs
+          git diff --cached --quiet && echo "nothing changed" || git commit -m "paid: ${{ inputs.week || 'oldest unpaid week' }}${{ inputs.strike && format(' / struck {0}', inputs.strike) || '' }}" -q
+          git push
