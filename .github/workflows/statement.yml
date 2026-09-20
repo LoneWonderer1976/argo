@@ -15,6 +15,8 @@ permissions: { contents: write, issues: write }
 jobs:
   statement:
     runs-on: ubuntu-latest
+    env:
+      SMTP_USER: "${{ secrets.SMTP_USER }}"     # `secrets` is not allowed in a step's `if`; env is
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -40,11 +42,10 @@ jobs:
           TITLE=$(python -m argo.statement --issue-file body.md ${{ inputs.week && format('--week {0}', inputs.week) || '' }})
           gh issue create --title "$TITLE" --body-file body.md
       - name: and an email, if SMTP is set up
-        if: ${{ secrets.SMTP_USER != '' }}
+        if: ${{ env.SMTP_USER != '' }}
         env:
           SMTP_HOST: "${{ secrets.SMTP_HOST }}"
           SMTP_PORT: "${{ secrets.SMTP_PORT }}"
-          SMTP_USER: "${{ secrets.SMTP_USER }}"
           SMTP_PASS: "${{ secrets.SMTP_PASS }}"
           MAIL_TO: "${{ secrets.MAIL_TO }}"
           PAGE_URL: "${{ vars.PAGE_URL }}"
