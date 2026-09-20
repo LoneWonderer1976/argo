@@ -23,7 +23,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 from . import store
-from .rates import SCHEME_START
+from .rates import SCHEME_START, STEPS_START
 from .sports import sport_for
 from .weeks import today_uk
 
@@ -114,6 +114,40 @@ def window_start(since: str | None) -> dt.date:
     return SCHEME_START
 
 
+STEPS_REFETCH_DAYS = 3      # a day's count grows until midnight; the last few days are always re-read
+
+
+def sync_steps(api, dry_run: bool = False) -> int:
+    """Daily step counts from STEPS_START, the last STEPS_REFETCH_DAYS days re-read every run."""
+    end = today_uk()
+    if end < STEPS_START:
+        return 0
+    have = store.steps()
+    settled = [d for d in have if d < (end - dt.timedelta(days=STEPS_REFETCH_DAYS)).isoformat()]
+    start = max(STEPS_START, dt.date.fromisoformat(max(settled)) + dt.timedelta(days=1)) if settled else STEPS_START
+    start = min(start, end - dt.timedelta(days=STEPS_REFETCH_DAYS))
+    start = max(start, STEPS_START)
+    try:
+        days = api.get_daily_steps(str(start), str(end)) or []
+    except Exception as e:
+        log(f"WARNING: could not read daily steps ({e})")
+        return 0
+    n = 0
+    for d in days:
+        date = d.get("calendarDate")
+        if not date or date < STEPS_START.isoformat():
+            continue
+        row = {"steps": int(d.get("totalSteps") or 0), "distance_m": d.get("totalDistance"), "goal": d.get("stepGoal"),
+               "synced_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")}
+        if have.get(date, {}).get("steps") != row["steps"]:
+            n += 1
+        have[date] = row
+    log(f"steps: {len(days)} days read from {start}, {n} changed")
+    if not dry_run and days:
+        store.write_steps(have)
+    return n
+
+
 def run(since: str | None = None, dry_run: bool = False) -> int:
     start = window_start(since)
     end = today_uk()
@@ -121,6 +155,7 @@ def run(since: str | None = None, dry_run: bool = False) -> int:
         log(f"the scheme opens {SCHEME_START}; nothing to fetch yet")
         return 0
     api = login()
+    sync_steps(api, dry_run)
     log(f"asking Garmin for activities {start} .. {end}")
     listed = api.get_activities_by_date(str(start), str(end)) or []
     have = store.activity_ids()

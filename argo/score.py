@@ -73,21 +73,45 @@ def scored_activities(activities: list[dict], excluded: dict, relabel: dict | No
     return out
 
 
-def weeks_from(rows: list[dict], ledger: dict) -> list[dict]:
+def steps_rows(steps: dict, rows: list[dict]) -> list[dict]:
+    """One row per day from STEPS_START with a step count: the count, the miles on foot in
+    recorded (unstruck) walks and runs that day, the net, the points."""
+    on_foot: dict[str, float] = {}
+    for r in rows:
+        if r["sport"] in rates.STEPS_DEDUCT_SPORTS and not r["excluded"]:
+            on_foot[r["date"]] = on_foot.get(r["date"], 0.0) + (r["distance_m"] or 0) * rates.MILES_PER_METRE
+    out = []
+    for date in sorted(steps):
+        if date < rates.STEPS_START.isoformat():
+            continue
+        miles = on_foot.get(date, 0.0)
+        net, pts = rates.steps_points(steps[date].get("steps"), miles)
+        out.append({"date": date, "week": week_of(dt.date.fromisoformat(date)).isoformat(), "steps": int(steps[date].get("steps") or 0),
+                    "miles_on_foot": round(miles, 2), "deducted": int(round(miles * rates.STEPS_PER_MILE_DEDUCTED)),
+                    "net": net, "points": round(pts, 3)})
+    return out
+
+
+def weeks_from(rows: list[dict], ledger: dict, days: list[dict] | None = None) -> list[dict]:
     """One entry per week from the week of SCHEME_START to this week, newest first, empty weeks included."""
     by_week: dict[str, list[dict]] = {}
     for r in rows:
         by_week.setdefault(r["week"], []).append(r)
+    steps_by_week: dict[str, list[dict]] = {}
+    for d in days or []:
+        steps_by_week.setdefault(d["week"], []).append(d)
     paid = ledger.get("weeks", {})
     out = []
     monday = week_of(rates.SCHEME_START)
     end = this_week()
-    if rows:   # a watch clock ahead of the calendar, or a selftest run before the scheme opens
-        end = max(end, dt.date.fromisoformat(max(r["week"] for r in rows)))
+    if rows or days:   # a watch clock ahead of the calendar, or a selftest run before the scheme opens
+        end = max([end] + [dt.date.fromisoformat(r["week"]) for r in rows] + [dt.date.fromisoformat(d["week"]) for d in days or []])
     while monday <= end:
         key = monday.isoformat()
         acts = by_week.get(key, [])
-        pts = sum(r["points"] for r in acts)
+        sdays = steps_by_week.get(key, [])
+        steps_pts = sum(d["points"] for d in sdays)
+        pts = sum(r["points"] for r in acts) + steps_pts
         capped = min(pts, rates.WEEK_CAP_POINTS) if rates.WEEK_CAP_POINTS else pts
         by_sport: dict[str, dict] = {}
         for r in acts:
@@ -107,6 +131,8 @@ def weeks_from(rows: list[dict], ledger: dict) -> list[dict]:
             "by_sport": {k: {kk: round(vv, 3) if isinstance(vv, float) else vv for kk, vv in v.items()}
                          for k, v in by_sport.items()},
             "paid_on": paid.get(key, {}).get("paid_on"), "paid_note": paid.get(key, {}).get("note"),
+            "steps": sum(d["steps"] for d in sdays), "steps_net": sum(d["net"] for d in sdays),
+            "steps_deducted": sum(d["deducted"] for d in sdays), "steps_points": round(steps_pts, 3), "steps_days": len(sdays),
         }
         out.append(entry)
         monday += dt.timedelta(days=7)
@@ -115,13 +141,15 @@ def weeks_from(rows: list[dict], ledger: dict) -> list[dict]:
 
 
 def build(activities: list[dict] | None = None, ledger: dict | None = None,
-          overrides: dict | None = None) -> dict:
+          overrides: dict | None = None, steps: dict | None = None) -> dict:
     activities = store.activities() if activities is None else activities
     ledger = store.ledger() if ledger is None else ledger
     overrides = store.overrides() if overrides is None else overrides
+    steps = store.steps() if steps is None else steps
     rows = scored_activities(activities, overrides.get("exclude", {}), overrides.get("sport", {}))
-    weeks = weeks_from(rows, ledger)
-    won = milestones.achieved(rows)
+    days = steps_rows(steps, rows)
+    weeks = weeks_from(rows, ledger, days)
+    won = milestones.achieved(rows, days=days)
     by_week_won: dict[str, list] = {}
     for m in won:
         by_week_won.setdefault(week_for(m["date"]).isoformat(), []).append(m)
@@ -138,11 +166,14 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
             "start": rates.SCHEME_START.isoformat(), "pence_per_point": rates.PENCE_PER_POINT,
             "week_cap_points": rates.WEEK_CAP_POINTS, "sports": list(rates.SPORTS),
             "eggs_start": rates.EGGS_START.isoformat(),
+            "steps_start": rates.STEPS_START.isoformat(), "steps_pts_per_10k": rates.STEPS_PTS_PER_10K,
+            "steps_per_mile_deducted": rates.STEPS_PER_MILE_DEDUCTED,
             "distance_per_mile": rates.DISTANCE_PER_MILE, "swim_per_100m": rates.SWIM_PTS_PER_100M,
             "ascent_per_m": rates.ASCENT_PTS_PER_M,
         },
         "totals": {
-            "points": round(sum(r["points"] for r in rows), 3),
+            "points": round(sum(r["points"] for r in rows) + sum(d["points"] for d in days), 3),
+            "steps_points": round(sum(d["points"] for d in days), 3), "steps_net": sum(d["net"] for d in days),
             "pence": sum(w["pence"] for w in weeks),
             "paid_pence": paid_pence, "owed_pence": owed_pence,
             "current_pence": current["pence"] if current else 0,
@@ -152,6 +183,7 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
         },
         "weeks": weeks,
         "activities": rows,
+        "steps": list(reversed(days)),
         # the Easter eggs: only the WON ones leave the server; the rest are a number
         "milestones": {"won": list(reversed(won)), "hidden": len(milestones.MILESTONES) - len(won),
                        "total": len(milestones.MILESTONES)},
@@ -192,7 +224,8 @@ def print_table(data: dict) -> None:
     for w in data["weeks"]:
         print(f"  {w['label']:>22}  {w['status']:7}  {w['n_activities']:2} acts  {w['points']:6.1f} pts  "
               f"{rates.gbp(w['pence']):>8}" + ("  CAPPED" if w["capped"] else "")
-              + (f"  {w['n_flagged']} flagged" if w["n_flagged"] else ""))
+              + (f"  {w['n_flagged']} flagged" if w["n_flagged"] else "")
+              + (f"  steps {w['steps_net']:,} net = {w['steps_points']:.1f} pts" if w["steps_days"] else ""))
     for r in data["activities"]:
         note = " | ".join(r["flags"]) if r["flags"] else ""
         if r["excluded"]:
@@ -215,7 +248,17 @@ def selftest() -> None:
          "distance_m": 5000, "ascent_m": 0, "duration_s": 1500, "avg_hr": 150, "avg_speed_mps": 3.3},
     ]
     ledger = {"weeks": {"2026-09-21": {"paid_on": "2026-09-28"}}}
-    d = build(acts, ledger, {"exclude": {"3": "that was the car"}, "sport": {"4": "kayak"}})
+    steps = {"2026-09-22": {"steps": 14000}, "2026-09-23": {"steps": 8000}, "2026-09-30": {"steps": 11000}, "2026-09-20": {"steps": 99999}}
+    d = build(acts, ledger, {"exclude": {"3": "that was the car"}, "sport": {"4": "kayak"}}, steps)
+    days = {x["date"]: x for x in d["steps"]}
+    assert "2026-09-20" not in days, "before STEPS_START must not count"
+    assert days["2026-09-22"]["miles_on_foot"] == 1.0 and days["2026-09-22"]["deducted"] == 0   # gross: the mile run costs nothing
+    assert days["2026-09-22"]["net"] == 14000 and days["2026-09-22"]["points"] == 1.4
+    assert days["2026-09-23"]["net"] == 8000 and days["2026-09-30"]["points"] == 1.1
+    w = {x["monday"]: x for x in d["weeks"]}
+    assert w["2026-09-21"]["steps_points"] == 2.2 and w["2026-09-21"]["points"] == 18.2 and w["2026-09-21"]["pence"] == 455
+    assert w["2026-09-28"]["steps_points"] == 1.1 and w["2026-09-28"]["pence"] == 214   # 1.1 pts of steps + the relabelled kayak
+    d = build(acts, ledger, {"exclude": {"3": "that was the car"}, "sport": {"4": "kayak"}}, {})
     rows = {r["id"]: r for r in d["activities"]}
     assert rows[4]["sport"] == "kayak" and rows[4]["points"] > 0 and rows[4]["relabelled"] and rows[4]["flags"] == []
     d = build(acts, ledger, {"exclude": {"3": "that was the car"}})

@@ -28,6 +28,7 @@
     $("updated").textContent = "updated " + b.toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit" });
     renderTrophies();
     renderWeeks();
+    renderSteps();
     renderActivities();
     renderSports();
     renderRates();
@@ -85,7 +86,7 @@
     box.innerHTML = weeks.map((w) => `
       <div class="week ${w.status}">
         <span class="pill ${w.status}">${w.status}</span>
-        <span class="label">${esc(w.label)}<div class="n">${w.n_activities} activit${w.n_activities === 1 ? "y" : "ies"} · ${w.points.toFixed(1)} pts${w.capped ? " · capped" : ""}${w.paid_on ? " · paid " + w.paid_on : ""}</div></span>
+        <span class="label">${esc(w.label)}<div class="n">${w.n_activities} activit${w.n_activities === 1 ? "y" : "ies"}${w.steps ? " · " + w.steps.toLocaleString() + " steps" : ""} · ${w.points.toFixed(1)} pts${w.capped ? " · capped" : ""}${w.paid_on ? " · paid " + w.paid_on : ""}</div></span>
         <span class="gbp">${gbp(w.pence)}</span>
       </div>`).join("");
     const chartWeeks = DATA.weeks.slice(0, 10).reverse();
@@ -104,6 +105,28 @@
           scales: { x: { grid: { display: false }, ticks: { color: col("muted") } }, y: { beginAtZero: true, ticks: { color: col("muted"), callback: (v) => "£" + v } } },
           animation: false,
         },
+      });
+    }
+  }
+
+  let stepsChart = null;
+  function renderSteps() {
+    const days = (DATA.steps || []).slice(0, 14).reverse();
+    $("steps-section").hidden = !days.length;
+    if (!days.length) return;
+    const wk = DATA.weeks.find((w) => w.status === "current") || {};
+    $("steps-sub").textContent = wk.steps ? `· ${wk.steps.toLocaleString()} this week = ${gbp(Math.round(wk.steps_points * DATA.scheme.pence_per_point))}` : "";
+    const t = DATA.totals;
+    $("steps-note").textContent = `${t.steps_net.toLocaleString()} steps since ${DATA.scheme.steps_start.slice(8, 10)}/${DATA.scheme.steps_start.slice(5, 7)} = ${t.steps_points.toFixed(1)} pts. ${DATA.scheme.pence_per_point * DATA.scheme.steps_pts_per_10k}p per 10,000 steps.`;
+    if (window.Chart) {
+      if (stepsChart) stepsChart.destroy();
+      const css = getComputedStyle(document.documentElement);
+      stepsChart = new Chart($("steps-chart"), {
+        type: "bar",
+        data: { labels: days.map((d) => d.date.slice(8, 10) + "/" + d.date.slice(5, 7)),
+          datasets: [{ data: days.map((d) => d.steps), backgroundColor: days.map((d) => d.steps >= 10000 ? css.getPropertyValue("--accent").trim() : css.getPropertyValue("--walk").trim()), borderRadius: 5 }] },
+        options: { animation: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.parsed.y.toLocaleString()} steps` } } },
+          scales: { x: { grid: { display: false }, ticks: { color: css.getPropertyValue("--muted").trim() } }, y: { beginAtZero: true, ticks: { color: css.getPropertyValue("--muted").trim(), callback: (v) => (v / 1000) + "k" } } } },
       });
     }
   }
@@ -140,6 +163,7 @@
       rows.push([`${ICON[sport]} ${sport}`, `${gbp(pts * pp)} a mile`, s.ascent_per_m[sport] ? `+ ${(s.ascent_per_m[sport] * pp * 100).toFixed(1)}p per 100 m climbed` : ""]);
     }
     rows.push([`${ICON.swim} swim`, `${gbp(s.swim_per_100m * pp)} per 100 m`, ""]);
+    if (s.steps_pts_per_10k) rows.push([`👟 steps`, `${gbp(s.steps_pts_per_10k * pp)} per 10,000`, `every day, from the watch${s.steps_per_mile_deducted ? `, less ${s.steps_per_mile_deducted.toLocaleString()} per mile walked or run` : ""}`]);
     $("rates").querySelector("tbody").innerHTML = rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td class="muted small">${r[2]}</td></tr>`).join("");
     $("rates-note").textContent = `${pp}p a point · the week runs Monday to Sunday · a week is paid once Dad marks it` + (s.week_cap_points ? ` · at most ${s.week_cap_points} points a week count` : "");
   }

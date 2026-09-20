@@ -37,10 +37,15 @@ def main() -> None:
         a["_track"] = _track(50.92 + rnd.uniform(-.02, .02), -1.29 + rnd.uniform(-.02, .02)) if a["sport"] not in ("swim", "other") else None
     first = rates.EGGS_START - dt.timedelta(days=rates.EGGS_START.weekday())
     ledger = {"weeks": {first.isoformat(): {"paid_on": (first + dt.timedelta(days=7)).isoformat()}}}
+    steps = {}
+    sd = rates.STEPS_START
+    while sd <= max(dt.date.today(), rates.STEPS_START + dt.timedelta(days=20)):
+        steps[sd.isoformat()] = {"steps": rnd.randint(3000, 19000)}
+        sd += dt.timedelta(days=1)
     real_has_track = store.has_track
     store.has_track = lambda i: any(a["id"] == i and a["_track"] for a in acts)
     try:
-        data = score.build(acts, ledger, {"exclude": {"90011": "that was the car"}})
+        data = score.build(acts, ledger, {"exclude": {"90011": "that was the car"}}, steps)
     finally:
         store.has_track = real_has_track
     store.DOCS.mkdir(exist_ok=True)

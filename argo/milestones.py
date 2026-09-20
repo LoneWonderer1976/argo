@@ -288,6 +288,21 @@ MILESTONES = [
       "Ten hours of activity altogether. Ten hours that could have been a screen and were a world instead."),
     M("total_time_24h", "total_time", None, 24 * H, "A whole day",
       "Twenty-four hours moving, all added up -- a full day and night of it. Thomas, that's a serious number."),
+    # --- steps (from STEPS_START; the days come from the watch, not from activities) ------------
+    M("steps_10k", "steps_day", None, 10000, "Ten thousand steps",
+      "10,000 steps in a day. The number everyone talks about and hardly anyone does. You did, Thomas."),
+    M("steps_15k", "steps_day", None, 15000, "Fifteen thousand",
+      "15,000 steps in one day -- about seven miles of walking hidden inside an ordinary day."),
+    M("steps_20k", "steps_day", None, 20000, "Twenty thousand",
+      "TWENTY THOUSAND steps in a day. That's a Roman legion's daily march. Your feet have earned a sit-down."),
+    M("steps_30k", "steps_day", None, 30000, "Thirty thousand",
+      "30,000 steps in a single day, Thomas. Fourteen miles on foot. Most people's cars don't do that on a weekday."),
+    M("steps_week_70k", "steps_week", None, 70000, "A ten-thousand week",
+      "70,000 steps in one week -- ten thousand a day, every day, no days off. That's a habit, not a fluke."),
+    M("steps_week_100k", "steps_week", None, 100000, "A hundred-thousand week",
+      "100,000 steps in a week. Six figures. Your watch has probably never seen a number that big."),
+    M("steps_1m", "steps_total", None, 1000000, "A million steps",
+      "ONE MILLION STEPS since the count began. Thomas, that is about 450 miles on foot -- Fair Oak to Edinburgh, one step at a time."),
     M("total_time_100h", "total_time", None, 100 * H, "A hundred hours",
       "ONE HUNDRED HOURS. Athletes talk about 10,000 hours to master something. You're 1 % of the way to being the best in the world, which is further than almost anyone gets."),
 ]
@@ -297,7 +312,7 @@ def _blank_week():
     return {"count": 0, "sports": set(), "days": set()}
 
 
-def achieved(rows: list[dict], start: dt.date | None = None) -> list[dict]:
+def achieved(rows: list[dict], start: dt.date | None = None, days: list[dict] | None = None) -> list[dict]:
     """Milestones won, each at the first activity that crossed it. `rows` are score.py's rows in
     any order; struck activities, unscored sports and anything before EGGS_START are ignored --
     the eggs' totals and streaks start from EGGS_START, whatever the ledger is backdated to."""
@@ -378,6 +393,18 @@ def achieved(rows: list[dict], start: dt.date | None = None) -> list[dict]:
             if hit:
                 won[m.key] = {"key": m.key, "title": m.title, "message": m.message,
                               "date": day.isoformat(), "activity_id": r["id"], "sport": s}
+    # the steps eggs walk the days, oldest first, with their own running totals
+    total = 0
+    week_tot: dict[str, int] = {}
+    for d in sorted((d for d in days or [] if d["date"] >= since), key=lambda d: d["date"]):
+        total += d["steps"]
+        week_tot[d["week"]] = week_tot.get(d["week"], 0) + d["steps"]
+        for m in MILESTONES:
+            if m.key in won:
+                continue
+            hit = (m.kind == "steps_day" and d["steps"] >= m.value) or (m.kind == "steps_week" and week_tot[d["week"]] >= m.value)                 or (m.kind == "steps_total" and total >= m.value)
+            if hit:
+                won[m.key] = {"key": m.key, "title": m.title, "message": m.message, "date": d["date"], "activity_id": None, "sport": "steps"}
     return sorted(won.values(), key=lambda x: (x["date"], x["key"]))
 
 
@@ -387,7 +414,8 @@ def selftest() -> None:
     assert len({m.title for m in MILESTONES}) == len(MILESTONES), "duplicate title"
     assert len({m.message for m in MILESTONES}) == len(MILESTONES), "duplicate message"
     kinds = {"single", "climb", "total", "total_climb", "money", "count", "week_count", "week_streak", "pace",
-             "hour_before", "hour_after", "weekend", "sports_in_week", "all_sports", "single_time", "total_time"}
+             "hour_before", "hour_after", "weekend", "sports_in_week", "all_sports", "single_time", "total_time",
+             "steps_day", "steps_week", "steps_total"}
     assert all(m.kind in kinds for m in MILESTONES)
     assert len(MILESTONES) >= 100, len(MILESTONES)
 
@@ -422,6 +450,12 @@ def selftest() -> None:
     later = [{**rows[0], "start_local": f"{EGGS_START} 16:00:00", "week": (EGGS_START - dt.timedelta(days=EGGS_START.weekday())).isoformat()}]
     assert "run_2mi" in {a["key"] for a in achieved(later)}
     # a milestone is won once and dated to the first crossing
+    days = [{"date": "2026-05-04", "week": "2026-05-04", "steps": 12000}, {"date": "2026-05-05", "week": "2026-05-04", "steps": 21000},
+            {"date": "2026-05-06", "week": "2026-05-04", "steps": 40000}, {"date": "2026-04-30", "week": "2026-04-27", "steps": 99999}]
+    sw = {a["key"]: a for a in achieved([], start=dt.date(2026, 5, 1), days=days)}
+    assert sw["steps_10k"]["date"] == "2026-05-04" and sw["steps_20k"]["date"] == "2026-05-05" and sw["steps_30k"]["date"] == "2026-05-06"
+    assert sw["steps_week_70k"]["date"] == "2026-05-06" and "steps_week_100k" not in sw and "steps_1m" not in sw
+    assert achieved([], days=days) == [] or EGGS_START <= dt.date(2026, 5, 4)
     twice = achieved(rows + [row(7, "run", "2026-06-01", 2.5 * MI)], start=dt.date(2026, 5, 1))
     assert sum(1 for a in twice if a["key"] == "run_2mi") == 1 and {a["key"]: a for a in twice}["run_2mi"]["date"] == "2026-05-04"
     print(f"milestones: selftest OK ({len(MILESTONES)} eggs)")

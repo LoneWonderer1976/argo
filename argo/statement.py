@@ -61,6 +61,8 @@ def compose(data: dict, monday: dt.date) -> tuple[str, str, str]:
                      f"{a['name']}{mark}")
     if not acts:
         lines.append("(no activities)")
+    if week.get("steps_days"):
+        lines.append(f"Steps: {week['steps']:,} over {week['steps_days']} days = {week['steps_points']:.1f} pts")
     lines += ["", f"Points {week['points']:.1f}" + (f" (paid for {week['points_paid_for']:.1f}, capped)" if week["capped"] else "")
               + f"  ->  {rates.gbp(week['pence'])} at {rates.PENCE_PER_POINT}p a point",
               f"Owed in total (unpaid weeks): {rates.gbp(owed)}", ""]
@@ -117,6 +119,9 @@ def compose_markdown(data: dict, monday: dt.date) -> tuple[str, str]:
                          f"| {_fmt_dur(a['duration_s'])} | {a['points']:.1f} | {a['name']}{note} | `{a['id']}` |")
     else:
         lines.append("_no activities_")
+    if week.get("steps_days"):
+        lines += ["", f"👟 **Steps:** {week['steps']:,} over {week['steps_days']} day{'s' if week['steps_days'] != 1 else ''} "
+                  f"= {week['steps_points']:.1f} pts ({rates.STEPS_PTS_PER_10K:g} pt per 10,000)"]
     if week.get("milestones"):
         lines += ["", "🏆 **Easter eggs found this week:** " + ", ".join(m["title"] for m in week["milestones"])]
     lines += ["", f"**Owed in total: {rates.gbp(owed)}** (every unpaid week)", "",

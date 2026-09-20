@@ -2,6 +2,9 @@
 
     data/activities/<id>.json   one per Garmin activity: Argo's fields + the raw summary, kept whole
     data/tracks/<id>.json       the activity's line, thinned for a phone map (lat/lon pairs)
+    data/steps.json             daily step counts {"2026-09-21": {"steps": 11234, ...}} -- the ONE file the
+                                sync rewrites, because a day's count grows until midnight (the last few
+                                days are re-fetched every run)
     data/ledger.json            the weeks Ben has marked PAID  {"weeks": {"2026-09-21": {"paid_on": ..}}}
     data/overrides.json         Ben's strikes and relabels  {"exclude": {"<id>": "reason"}, "sport": {"<id>": "kayak"}}
 
@@ -17,6 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 ACTS = DATA / "activities"
 TRACKS = DATA / "tracks"
+STEPS = DATA / "steps.json"
 LEDGER = DATA / "ledger.json"
 OVERRIDES = DATA / "overrides.json"
 DOCS = ROOT / "docs"
@@ -54,6 +58,14 @@ def write_track(activity_id: int, points: list[list[float]], n_raw: int) -> None
 
 def has_track(activity_id: int) -> bool:
     return (TRACKS / f"{activity_id}.json").exists()
+
+
+def steps() -> dict:
+    return _read(STEPS, {})
+
+
+def write_steps(obj: dict) -> None:
+    _write(STEPS, obj)
 
 
 def ledger() -> dict:

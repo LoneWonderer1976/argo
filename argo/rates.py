@@ -19,6 +19,14 @@ EGGS_START = dt.date(2026, 9, 21)       # the Easter eggs count from here (Ben, 
 PENCE_PER_POINT = 25
 WEEK_CAP_POINTS = None                  # a ceiling on points paid per week; None = no cap (Ben, later)
 
+# --- steps (Ben, 20/09/2026: "25p per 10,000 steps ... don't backdate this, start from tomorrow";
+# a deduction of 2,000 steps per recorded mile on foot was asked for and withdrawn the same
+# minute -- "make it gross, 25p per 10,000 irrespective" -- so the dial exists and sits at 0) ----
+STEPS_START = dt.date(2026, 9, 21)
+STEPS_PTS_PER_10K = 1.0                 # 10,000 steps = 1 point = 25p, gross
+STEPS_PER_MILE_DEDUCTED = 0             # steps per recorded mile on foot NOT paid; 0 = gross (Ben)
+STEPS_DEDUCT_SPORTS = ("walk", "run")
+
 # --- sports ---------------------------------------------------------------------------------
 # Ben, 20/09/2026: walking, cycling, running, swimming and kayaking, "we can add more if needed".
 SPORTS = ("run", "walk", "cycle", "swim", "kayak")
@@ -51,6 +59,13 @@ def points_for(sport: str, distance_m: float | None, ascent_m: float | None) -> 
     return out
 
 
+def steps_points(steps: int | None, miles_on_foot: float) -> tuple[int, float]:
+    """(net steps, points) for one day: the day's steps less 2,000 per recorded mile on foot,
+    never below zero."""
+    net = max(0, int(steps or 0) - int(round(miles_on_foot * STEPS_PER_MILE_DEDUCTED)))
+    return net, net / 10000.0 * STEPS_PTS_PER_10K
+
+
 def pence(points: float) -> int:
     """Whole pence for a points total -- round half up, on the TOTAL, never per activity."""
     return int(points * PENCE_PER_POINT + 0.5)
@@ -70,6 +85,9 @@ def selftest() -> None:
     assert points_for("football", 5000, 0) == {"distance": 0.0, "ascent": 0.0}
     assert points_for("run", None, 0) == {"distance": 0.0, "ascent": 0.0}
     assert points_for("run", 50, 0) == {"distance": 0.0, "ascent": 0.0}            # under the floor
+    assert steps_points(12000, 0) == (12000, 1.2) and steps_points(12000, 5.0) == (12000, 1.2)   # gross
+    assert steps_points(None, 0) == (0, 0.0)
+    assert STEPS_START >= SCHEME_START
     assert pence(4.0) == 100 and pence(0.019) == 0 and pence(0.02) == 1 and pence(3.999) == 100
     assert gbp(1234) == "£12.34"
     assert EGGS_START >= SCHEME_START

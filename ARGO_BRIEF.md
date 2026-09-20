@@ -145,6 +145,27 @@ plan; private sites are an Enterprise feature). Ben chose to accept it over a St
 privacy trim on the tracks or no maps at all — *"I'll accept it"*. The address is his
 username plus "argo"; the page carries Thomas's first name and his routes.
 
+## Steps (20/09/2026, late)
+
+Ben: *"for Thomas can we add steps, give 25p per 10,000 steps minus 2000 steps per mile walked
+or run so we don't pay twice, don't backdate this, start from tomorrow"* — and, before it was
+built, *"I've changed my mind make it gross, 25p per 10,000 irrespective."*
+
+- **A third clock.** `STEPS_START` = 21 September 2026. The sync reads Garmin's daily step
+  counts from there (`get_daily_steps`), and `data/steps.json` is the one file the sync
+  REWRITES: a day's count grows until midnight, so the last three days are re-read every run
+  and overwritten. Everything else in `data/` is still written once.
+- **1 point per 10,000 steps, gross.** `STEPS_PTS_PER_10K` = 1.0 at 25p a point. The deduction
+  Ben asked for and withdrew in the same minute is kept as a dial at zero
+  (`STEPS_PER_MILE_DEDUCTED` = 0): the miles on foot per day are still computed and shown on the
+  day's row, so turning it back on is a number, not a build.
+- **The week's points are activities plus steps**, and the cap, the money and the statement all
+  sit on that total. A complete week with no activities but some steps is *owed*, not *empty*.
+- **Seven steps eggs** — 10k / 15k / 20k / 30k days, 70k and 100k weeks, a million — walk the
+  days rather than the activities, from `EGGS_START` like the rest.
+- The page shows the last fourteen days as bars (gold at 10,000 and over), the week rows carry
+  the count, and the rate table has its row. The statement has a steps line.
+
 ## Not built, deliberately
 
 - **Screen time.** Ben: *"or possibly screentime or both"*. Points are the currency; a second
