@@ -33,7 +33,7 @@ Then open `https://<you>.github.io/argo/` on his phone and *Add to Home Screen*.
 The sync runs hourly from then on. Everything since **1 May 2026** is fetched and scored, so the
 first statement will show a backlog of owed weeks: reply **paid all** to it to settle them in one go.
 The Easter eggs count from **21 September 2026** (`EGGS_START`), so the backlog wins none of them.
-Steps count from the same day (`STEPS_START`): 25p per 10,000, gross, every day, from the watch.
+Steps count from the same day (`STEPS_START`): 50p per 10,000, gross, every day, from the watch.
 
 ## The week
 

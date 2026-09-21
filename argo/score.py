@@ -253,11 +253,11 @@ def selftest() -> None:
     days = {x["date"]: x for x in d["steps"]}
     assert "2026-09-20" not in days, "before STEPS_START must not count"
     assert days["2026-09-22"]["miles_on_foot"] == 1.0 and days["2026-09-22"]["deducted"] == 0   # gross: the mile run costs nothing
-    assert days["2026-09-22"]["net"] == 14000 and days["2026-09-22"]["points"] == 1.4
-    assert days["2026-09-23"]["net"] == 8000 and days["2026-09-30"]["points"] == 1.1
+    assert days["2026-09-22"]["net"] == 14000 and days["2026-09-22"]["points"] == 2.8
+    assert days["2026-09-23"]["net"] == 8000 and days["2026-09-30"]["points"] == 2.2
     w = {x["monday"]: x for x in d["weeks"]}
-    assert w["2026-09-21"]["steps_points"] == 2.2 and w["2026-09-21"]["points"] == 18.2 and w["2026-09-21"]["pence"] == 455
-    assert w["2026-09-28"]["steps_points"] == 1.1 and w["2026-09-28"]["pence"] == 214   # 1.1 pts of steps + the relabelled kayak
+    assert w["2026-09-21"]["steps_points"] == 4.4 and w["2026-09-21"]["points"] == 20.4 and w["2026-09-21"]["pence"] == 510
+    assert w["2026-09-28"]["steps_points"] == 2.2 and w["2026-09-28"]["pence"] == 241   # 2.2 pts of steps + the relabelled kayak
     d = build(acts, ledger, {"exclude": {"3": "that was the car"}, "sport": {"4": "kayak"}}, {})
     rows = {r["id"]: r for r in d["activities"]}
     assert rows[4]["sport"] == "kayak" and rows[4]["points"] > 0 and rows[4]["relabelled"] and rows[4]["flags"] == []

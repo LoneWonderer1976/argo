@@ -23,7 +23,7 @@ WEEK_CAP_POINTS = None                  # a ceiling on points paid per week; Non
 # a deduction of 2,000 steps per recorded mile on foot was asked for and withdrawn the same
 # minute -- "make it gross, 25p per 10,000 irrespective" -- so the dial exists and sits at 0) ----
 STEPS_START = dt.date(2026, 9, 21)
-STEPS_PTS_PER_10K = 1.0                 # 10,000 steps = 1 point = 25p, gross
+STEPS_PTS_PER_10K = 2.0                 # 10,000 steps = 2 points = 50p, gross (Ben, 21/09: was 25p for a day)
 STEPS_PER_MILE_DEDUCTED = 0             # steps per recorded mile on foot NOT paid; 0 = gross (Ben)
 STEPS_DEDUCT_SPORTS = ("walk", "run")
 
@@ -85,7 +85,7 @@ def selftest() -> None:
     assert points_for("football", 5000, 0) == {"distance": 0.0, "ascent": 0.0}
     assert points_for("run", None, 0) == {"distance": 0.0, "ascent": 0.0}
     assert points_for("run", 50, 0) == {"distance": 0.0, "ascent": 0.0}            # under the floor
-    assert steps_points(12000, 0) == (12000, 1.2) and steps_points(12000, 5.0) == (12000, 1.2)   # gross
+    assert steps_points(12000, 0) == (12000, 2.4) and steps_points(12000, 5.0) == (12000, 2.4)   # gross, 2 pts per 10k
     assert steps_points(None, 0) == (0, 0.0)
     assert STEPS_START >= SCHEME_START
     assert pence(4.0) == 100 and pence(0.019) == 0 and pence(0.02) == 1 and pence(3.999) == 100

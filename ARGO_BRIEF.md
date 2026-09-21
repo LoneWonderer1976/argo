@@ -155,7 +155,7 @@ built, *"I've changed my mind make it gross, 25p per 10,000 irrespective."*
   counts from there (`get_daily_steps`), and `data/steps.json` is the one file the sync
   REWRITES: a day's count grows until midnight, so the last three days are re-read every run
   and overwritten. Everything else in `data/` is still written once.
-- **1 point per 10,000 steps, gross.** `STEPS_PTS_PER_10K` = 1.0 at 25p a point. The deduction
+- **2 points per 10,000 steps, gross** — 50p. `STEPS_PTS_PER_10K` = 2.0 at 25p a point (it was 1.0, 25p, for the day before the scheme's first steps landed: Ben, 21/09, *"amend steps value to 50p per 10,000"*). The deduction
   Ben asked for and withdrew in the same minute is kept as a dial at zero
   (`STEPS_PER_MILE_DEDUCTED` = 0): the miles on foot per day are still computed and shown on the
   day's row, so turning it back on is a number, not a build.
