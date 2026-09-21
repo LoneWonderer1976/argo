@@ -1,1 +1,4 @@
-{}
+{
+ "min_distance_m": 100.0,
+ "week_cap_points": null
+}
