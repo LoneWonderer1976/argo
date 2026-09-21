@@ -11,6 +11,8 @@ notification email lands here too) is read for its FIRST non-empty line:
     strike 12345678 the car   strike that activity (it earns nothing; the reason shows on his page)
     unstrike 12345678         put it back
     sport 12345678 kayak      the watch said "other"; this is what it was
+    set steps_pts_per_10k 2   change a setting (python -m argo.settings lists them)
+    reset week_cap_points     back to the default ('reset all' for every one)
 
 Anything else is ignored with a polite note. The result goes to stdout for the workflow to post
 back as a comment; "CLOSE" on the last line tells it to close the issue.
@@ -18,7 +20,7 @@ back as a comment; "CLOSE" on the last line tells it to close the issue.
 import argparse
 import re
 
-from . import pay, rates, score
+from . import pay, rates, score, settings
 
 WEEK_RE = re.compile(r"<!--\s*argo-week:\s*(\d{4}-\d{2}-\d{2})\s*-->")
 
@@ -66,6 +68,14 @@ def _handle(issue_body: str, comment: str, apply: bool) -> str:
         data = score.build()
         w = next(x for x in data["weeks"] if x["monday"] == week)
         return f"Struck {rest[0]}. {w['label']} is now {w['points']:.1f} pts = {rates.gbp(w['pence'])}. Reply **paid** when ready."
+    if verb == "set" and len(rest) >= 2:
+        try:
+            lines = settings.set_many({rest[0].lower(): rest[1]}, apply)
+        except ValueError as e:
+            return f"Not done: {e}"
+        return lines[0] + ". Every week re-scores on the next sync."
+    if verb == "reset" and rest:
+        return "; ".join(settings.reset(rest[0].lower(), apply)) + "."
     if verb == "sport" and len(rest) >= 2:
         pay.relabel(rest[0], rest[1].lower(), apply)
         data = score.build()
@@ -74,8 +84,8 @@ def _handle(issue_body: str, comment: str, apply: bool) -> str:
     if verb == "unstrike" and rest:
         pay.unstrike(rest[0], apply)
         return f"Un-struck {rest[0]}; it scores again. Reply **paid** when ready."
-    return ("I read replies that start with **paid**, **paid all**, **strike `<id>` reason**, **unstrike `<id>`** "
-            "or **sport `<id>` run|walk|cycle|swim|kayak** -- nothing done.")
+    return ("I read replies that start with **paid**, **paid all**, **strike `<id>` reason**, **unstrike `<id>`**, "
+            "**sport `<id>` run|walk|cycle|swim|kayak**, **set `<setting>` `<value>`** or **reset `<setting>`** -- nothing done.")
 
 
 def selftest() -> None:
@@ -88,6 +98,8 @@ def selftest() -> None:
     assert "no week marker" in handle("no marker", "paid", False)
     assert "nothing done" in handle("<!-- argo-week: 2026-09-21 -->", "thanks!", False)
     assert handle("<!-- argo-week: 2099-01-05 -->", "paid", False).startswith("Not done: the week of")
+    assert handle("<!-- argo-week: 2026-09-21 -->", "set pence_per_point x", False).startswith("Not done: pence_per_point needs a number")
+    assert handle("<!-- argo-week: 2026-09-21 -->", "set steps_pts_per_10k 3", False).startswith("would set steps_pts_per_10k: ")
     print("reply: selftest OK")
 
 

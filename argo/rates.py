@@ -9,8 +9,18 @@ GBP 0.25 per 100 m swum; 1p per metre climbed running, 1/2p walking, 1/4p cyclin
 
 Change a number here and the whole ledger re-scores on the next run -- points are derived from
 the stored activities every time, never cached (Nostos Datum's second prime directive).
+
+THESE ARE THE DEFAULTS. Ben overrides any of them without touching code -- `python -m argo.settings`,
+the `settings` workflow's form on GitHub, or `set <key> <value>` on a statement issue -- and the
+overrides live in data/settings.json, read at the bottom of this file as it imports, so every
+module that imports a constant from here sees the override. `DEFAULTS` keeps the original values
+for the settings report. ARGO_NO_SETTINGS=1 in the environment skips the file (check.py sets it
+so the selftests test the defaults).
 """
 import datetime as dt
+import json
+import os
+from pathlib import Path
 
 # --- the scheme -----------------------------------------------------------------------------
 SCHEME_START = dt.date(2026, 5, 1)      # the day the ledger opens (Ben, 20/09: "backdate to 1st May"). Nothing before it earns.
@@ -96,3 +106,71 @@ def selftest() -> None:
 
 if __name__ == "__main__":
     selftest()
+
+
+# --- Ben's overrides, applied last so everything above is a default --------------------------
+# key -> (attribute here, type, note). Type is int / float / "date" / "int?" (int or none) /
+# "per100" (entered per 100 m, stored per metre). settings.py is the front door; this is the table.
+SETTINGS = {
+    "pence_per_point":         ("PENCE_PER_POINT", int, "pence paid per point"),
+    "week_cap_points":         ("WEEK_CAP_POINTS", "int?", "most points paid in a week; 'none' = no cap"),
+    "scheme_start":            ("SCHEME_START", "date", "the day the ledger opens"),
+    "eggs_start":              ("EGGS_START", "date", "the day the Easter eggs start counting"),
+    "steps_start":             ("STEPS_START", "date", "the day steps start counting"),
+    "steps_pts_per_10k":       ("STEPS_PTS_PER_10K", float, "points per 10,000 steps"),
+    "steps_per_mile_deducted": ("STEPS_PER_MILE_DEDUCTED", int, "steps not paid per recorded mile on foot (0 = gross)"),
+    "run_per_mile":            ("DISTANCE_PER_MILE.run", float, "points per mile run"),
+    "walk_per_mile":           ("DISTANCE_PER_MILE.walk", float, "points per mile walked"),
+    "cycle_per_mile":          ("DISTANCE_PER_MILE.cycle", float, "points per mile cycled"),
+    "kayak_per_mile":          ("DISTANCE_PER_MILE.kayak", float, "points per mile paddled"),
+    "swim_per_100m":           ("SWIM_PTS_PER_100M", float, "points per 100 m swum"),
+    "run_ascent_per_100m":     ("ASCENT_PTS_PER_M.run", "per100", "points per 100 m climbed running"),
+    "walk_ascent_per_100m":    ("ASCENT_PTS_PER_M.walk", "per100", "points per 100 m climbed walking"),
+    "cycle_ascent_per_100m":   ("ASCENT_PTS_PER_M.cycle", "per100", "points per 100 m climbed cycling"),
+    "min_distance_m":          ("MIN_DISTANCE_M", float, "an activity shorter than this earns nothing"),
+}
+
+
+def current(key: str):
+    attr = SETTINGS[key][0]
+    if "." in attr:
+        d, k = attr.split(".")
+        return globals()[d][k]
+    return globals()[attr]
+
+
+def apply_overrides(overrides: dict) -> list[str]:
+    """Push each override onto this module. Returns the keys that were unknown (ignored, never fatal)."""
+    bad = []
+    for key, value in overrides.items():
+        if key not in SETTINGS:
+            bad.append(key)
+            continue
+        attr, kind, _ = SETTINGS[key]
+        if kind == "date" and isinstance(value, str):
+            value = dt.date.fromisoformat(value)
+        if "." in attr:
+            d, k = attr.split(".")
+            globals()[d][k] = value
+        else:
+            globals()[attr] = value
+    return bad
+
+
+DEFAULTS = {key: current(key) for key in SETTINGS}      # captured before any override
+
+
+def _load_overrides() -> None:
+    if os.environ.get("ARGO_NO_SETTINGS"):
+        return
+    path = Path(__file__).resolve().parent.parent / "data" / "settings.json"
+    if not path.exists():
+        return
+    try:
+        overrides = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError:
+        return                                     # an unreadable file is no overrides, never a crash
+    apply_overrides(overrides)
+
+
+_load_overrides()

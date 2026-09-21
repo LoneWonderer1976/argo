@@ -1,8 +1,11 @@
 """check.py -- every selftest, then pyflakes. Exit 1 on any failure."""
+import os
 import subprocess
 import sys
 
-MODULES = ["rates", "sports", "weeks", "milestones", "sync", "score", "statement", "reply"]
+os.environ["ARGO_NO_SETTINGS"] = "1"        # the selftests test the defaults, whatever Ben has set
+
+MODULES = ["rates", "settings", "sports", "weeks", "milestones", "sync", "score", "statement", "reply"]
 fails = 0
 for m in MODULES:
     r = subprocess.run([sys.executable, "-m", f"argo.{m}", "--selftest"], capture_output=True, text=True)

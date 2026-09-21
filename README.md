@@ -48,6 +48,26 @@ Steps count from the same day (`STEPS_START`): 50p per 10,000, gross, every day,
   activity earns nothing, with the reason shown on his page; **unstrike `<id>`** undoes it. Then **paid**.
 - The *pay* workflow (Actions tab → *pay* → Run workflow) does the same from a form, if you prefer.
 
+## Changing the rules — the admin panel
+
+Every number (pence per point, the per-mile and per-climb rates, the steps rate, the weekly cap,
+the three start dates) is a **setting** with a default in `argo/rates.py` and an override in
+`data/settings.json`. Three ways to change one, all the same table:
+
+- **The form:** Actions → *settings* → *Run workflow*. Fill in only what you want to change; blank
+  stays as is; *other* takes `key=value` pairs for the rest; *reset* puts one (or `all`) back to
+  its default. Works from a phone. A bad value is refused with the reason.
+- **A reply on a statement issue:** `set steps_pts_per_10k 3`, `reset week_cap_points`.
+- **On the PC:** `python -m argo.settings` lists them all; `--set key value --apply` changes one.
+
+A change re-scores every week, past and present (points are never stored), and is a commit —
+`git log data/settings.json` is the history of the rules. The settings are:
+
+`pence_per_point` · `week_cap_points` · `scheme_start` · `eggs_start` · `steps_start` ·
+`steps_pts_per_10k` · `steps_per_mile_deducted` · `run_per_mile` · `walk_per_mile` ·
+`cycle_per_mile` · `kayak_per_mile` · `swim_per_100m` · `run_ascent_per_100m` ·
+`walk_ascent_per_100m` · `cycle_ascent_per_100m` · `min_distance_m`
+
 ## On the PC
 
 ```bash

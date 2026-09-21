@@ -1,0 +1,53 @@
+# Ben's admin panel: Actions -> settings -> Run workflow. Fill in only what you want to change;
+# blank fields stay as they are. `other` takes anything else as key=value pairs (the full list is
+# `python -m argo.settings`, or the "how it pays" table on his page). A bad value is refused with
+# the reason and nothing is changed. Every change is a commit, so `git log data/settings.json`
+# is the history of the rules.
+name: settings
+on:
+  workflow_dispatch:
+    inputs:
+      pence_per_point:   { description: "pence per point (default 25)", required: false }
+      steps_pts_per_10k: { description: "points per 10,000 steps (default 2 = 50p)", required: false }
+      week_cap_points:   { description: "most points paid in a week, or 'none'", required: false }
+      run_per_mile:      { description: "points per mile run (default 4)", required: false }
+      walk_per_mile:     { description: "points per mile walked (default 2)", required: false }
+      cycle_per_mile:    { description: "points per mile cycled (default 1)", required: false }
+      kayak_per_mile:    { description: "points per mile paddled (default 4)", required: false }
+      swim_per_100m:     { description: "points per 100 m swum (default 1)", required: false }
+      other:             { description: "anything else, as key=value pairs: eggs_start=2026-10-01 run_ascent_per_100m=4", required: false }
+      reset:             { description: "a setting to put back to its default, or 'all'", required: false }
+concurrency: { group: argo-data, cancel-in-progress: false }
+permissions: { contents: write }
+jobs:
+  settings:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: apply
+        env:
+          CHANGES: >-
+            ${{ inputs.pence_per_point && format('pence_per_point={0} ', inputs.pence_per_point) || '' }}
+            ${{ inputs.steps_pts_per_10k && format('steps_pts_per_10k={0} ', inputs.steps_pts_per_10k) || '' }}
+            ${{ inputs.week_cap_points && format('week_cap_points={0} ', inputs.week_cap_points) || '' }}
+            ${{ inputs.run_per_mile && format('run_per_mile={0} ', inputs.run_per_mile) || '' }}
+            ${{ inputs.walk_per_mile && format('walk_per_mile={0} ', inputs.walk_per_mile) || '' }}
+            ${{ inputs.cycle_per_mile && format('cycle_per_mile={0} ', inputs.cycle_per_mile) || '' }}
+            ${{ inputs.kayak_per_mile && format('kayak_per_mile={0} ', inputs.kayak_per_mile) || '' }}
+            ${{ inputs.swim_per_100m && format('swim_per_100m={0} ', inputs.swim_per_100m) || '' }}
+            ${{ inputs.other }}
+          RESET: "${{ inputs.reset }}"
+        run: |
+          if [ -n "$RESET" ]; then python -m argo.settings --reset "$RESET" --apply; fi
+          if [ -n "$(echo $CHANGES | tr -d ' ')" ]; then python -m argo.settings --changes "$CHANGES" --apply; fi
+          echo; python -m argo.settings
+          python -m argo.score --print | head -5
+      - name: commit
+        run: |
+          git config user.name "argo"
+          git config user.email "argo@users.noreply.github.com"
+          git add data docs
+          git diff --cached --quiet && echo "nothing changed" || git commit -m "settings: ${{ inputs.other }} $(python -c "import json;print(json.load(open('data/settings.json')) if __import__('os').path.exists('data/settings.json') else '{}')" | head -c 120)" -q
+          git push

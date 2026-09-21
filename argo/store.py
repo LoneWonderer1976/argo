@@ -5,6 +5,7 @@
     data/steps.json             daily step counts {"2026-09-21": {"steps": 11234, ...}} -- the ONE file the
                                 sync rewrites, because a day's count grows until midnight (the last few
                                 days are re-fetched every run)
+    data/settings.json          Ben's overrides of rates.py's constants  {"steps_pts_per_10k": 2.0, ...}
     data/ledger.json            the weeks Ben has marked PAID  {"weeks": {"2026-09-21": {"paid_on": ..}}}
     data/overrides.json         Ben's strikes and relabels  {"exclude": {"<id>": "reason"}, "sport": {"<id>": "kayak"}}
 
@@ -21,6 +22,7 @@ DATA = ROOT / "data"
 ACTS = DATA / "activities"
 TRACKS = DATA / "tracks"
 STEPS = DATA / "steps.json"
+SETTINGS = DATA / "settings.json"
 LEDGER = DATA / "ledger.json"
 OVERRIDES = DATA / "overrides.json"
 DOCS = ROOT / "docs"
@@ -66,6 +68,14 @@ def steps() -> dict:
 
 def write_steps(obj: dict) -> None:
     _write(STEPS, obj)
+
+
+def settings() -> dict:
+    return _read(SETTINGS, {})
+
+
+def write_settings(obj: dict) -> None:
+    _write(SETTINGS, obj)
 
 
 def ledger() -> dict:

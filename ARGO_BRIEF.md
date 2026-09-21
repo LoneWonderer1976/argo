@@ -166,6 +166,28 @@ built, *"I've changed my mind make it gross, 25p per 10,000 irrespective."*
 - The page shows the last fourteen days as bars (gold at 10,000 and over), the week rows carry
   the count, and the rate table has its row. The statement has a steps line.
 
+## The admin panel (21/09/2026)
+
+Ben: *"is it possible to add a backend or admin mechanism so I can adjust any of these variables
+manually"*. There is no server to put a panel on, and adding one for this would be the first
+piece of the app that could go down. So the panel is GitHub: **a `settings` workflow whose
+"Run workflow" form is the admin screen** — eight named fields for the money rates, an *other*
+field for `key=value` pairs, a *reset* field — plus `set <key> <value>` / `reset <key>` as a
+reply on a statement issue, and `python -m argo.settings` on the PC. All three go through one
+table, `rates.SETTINGS`, which names every constant that may be overridden, its type and a note.
+
+The mechanism: the numbers in `rates.py` are the DEFAULTS; `data/settings.json` holds
+overrides; `rates.py` applies them at the bottom of its own import, so every module that does
+`from .rates import X` sees the override. `DEFAULTS` is captured before that, so the report can
+show *current / default / overridden*. A value is validated before anything is written (a date
+must be a date, a rate cannot be negative, `pence_per_point` cannot be 0), and a batch is
+all-or-nothing. `check.py` runs the selftests with `ARGO_NO_SETTINGS=1` so they test the
+defaults whatever Ben has set.
+
+Because points are derived on every run, a change re-scores the whole history, past weeks
+included — which is what "adjust the variables" should mean, and is also the caveat: lowering a
+rate lowers an *owed* week's figure. A *paid* week keeps its `pence` in the ledger as paid.
+
 ## Not built, deliberately
 
 - **Screen time.** Ben: *"or possibly screentime or both"*. Points are the currency; a second
