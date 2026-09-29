@@ -2,6 +2,7 @@
 
     python -m argo.sync            # normal run: everything since the newest stored activity
     python -m argo.sync --since 2026-09-01   # re-open the window (stored files still win)
+    python -m argo.sync --all      # his whole Garmin history, and any track a past run missed
     python -m argo.sync --dry-run  # list what it would fetch, write nothing
 
 LOGIN. Garmin tokens come from the GARMINTOKENS environment variable (the string that
@@ -15,11 +16,20 @@ a re-run is free and a widened window is safe. The summary is what Garmin's own 
 (distance, ascent, duration, heart rate, speed -- everything the rate table needs); the track
 comes from the GPX download, thinned to TRACK_POINTS for the phone map, and is only asked for
 when the summary says there is one.
+
+HISTORY (Thomas, 29/09/2026: his whole Garmin history on the page). An activity from before
+SCHEME_START is stored like any other; score.py shows it and pays nothing for it. What decides
+the money is the scheme's start date, not what the sync happened to fetch.
+
+NOT ACTIVITIES. Garmin logs a safety request (the watch's assistance button) in the same list
+as a run, with the place it was pressed. It is never stored: it is not exercise, and the page
+is public.
 """
 import argparse
 import datetime as dt
 import os
 import sys
+import time
 import xml.etree.ElementTree as ET
 
 from . import store
@@ -29,6 +39,13 @@ from .weeks import today_uk
 
 TOKEN_DIR = store.ROOT / ".garmin_tokens"
 TRACK_POINTS = 400
+HISTORY_FLOOR = dt.date(2000, 1, 1)     # --all asks Garmin from here: a query bound, not a rule
+SAFETY_WORDS = ("assist", "incident")   # typeKey words of Garmin's safety records (seen: "assistance")
+
+
+def is_safety_record(type_key: str | None) -> bool:
+    key = (type_key or "").lower()
+    return any(w in key for w in SAFETY_WORDS)
 
 
 def log(msg: str) -> None:
@@ -148,7 +165,36 @@ def sync_steps(api, dry_run: bool = False) -> int:
     return n
 
 
-def run(since: str | None = None, dry_run: bool = False) -> int:
+TRACK_PAUSE_S = 0.5     # between GPX downloads, so a history import is not a burst at Garmin
+
+
+def fetch_track(api, activity_id: int) -> bool:
+    """The GPX, thinned, into data/tracks. False (and a log line) when Garmin gives nothing usable --
+    a missing track is a missing map, not a missing payment."""
+    try:
+        from garminconnect import Garmin
+        gpx = api.download_activity(activity_id, dl_fmt=Garmin.ActivityDownloadFormat.GPX)
+        pts = gpx_points(gpx)
+    except Exception as e:
+        log(f"    track download failed ({e}); summary still stored")
+        return False
+    finally:
+        time.sleep(TRACK_PAUSE_S)
+    if pts:
+        store.write_track(activity_id, thin(pts), len(pts))
+    return bool(pts)
+
+
+def fill_tracks(api, dry_run: bool = False) -> int:
+    """Ask again for the track of every stored activity that should have one and does not."""
+    missing = [r for r in store.activities() if r.get("has_polyline") and not store.has_track(r["id"])]
+    log(f"tracks: {len(missing)} stored activities with a track Garmin has and we do not")
+    if dry_run:
+        return 0
+    return sum(fetch_track(api, r["id"]) for r in missing)
+
+
+def run(since: str | None = None, dry_run: bool = False, tracks: bool = False) -> int:
     start = window_start(since)
     end = today_uk()
     if start > end:
@@ -165,24 +211,20 @@ def run(since: str | None = None, dry_run: bool = False) -> int:
     for a in sorted(new, key=lambda a: a.get("startTimeLocal") or ""):
         row = summary_row(a)
         km = (row["distance_m"] or 0) / 1000
+        if is_safety_record(row["type_key"]):
+            log(f"  {row['start_local'][:16]}  a safety record ({row['type_key']}) -- not an activity, not stored")
+            continue
         log(f"  {row['start_local'][:16]}  {row['sport']:5}  {km:5.1f} km  {row['name']}"
             + ("  [track]" if row["has_polyline"] else ""))
         if dry_run:
             continue
-        if row["start_local"] and dt.date.fromisoformat(row["start_local"][:10]) < SCHEME_START:
-            continue   # before the ledger opened -- never stored, never paid
         if row["has_polyline"]:
-            try:
-                from garminconnect import Garmin
-                gpx = api.download_activity(row["id"], dl_fmt=Garmin.ActivityDownloadFormat.GPX)
-                pts = gpx_points(gpx)
-                if pts:
-                    store.write_track(row["id"], thin(pts), len(pts))
-            except Exception as e:      # a missing track is a missing map, not a missing payment
-                log(f"    track download failed ({e}); summary still stored")
+            fetch_track(api, row["id"])
         store.write_activity(row)
         fetched += 1
     log(f"stored {fetched} new activities" if not dry_run else "dry run -- nothing written")
+    if tracks:
+        log(f"filled {fill_tracks(api, dry_run)} missing tracks")
     return fetched
 
 
@@ -201,19 +243,22 @@ def selftest() -> None:
     assert row["id"] == 7 and row["sport"] == "run" and row["start_local"] == "2026-09-22 16:05:00"
     assert row["name"] == "Lunch Run" and row["raw"]["activityId"] == "7" and row["ascent_m"] == 41.2
     assert summary_row({"activityId": 1})["sport"] == "other"
+    assert is_safety_record("assistance") and is_safety_record("incident_detected")
+    assert not any(is_safety_record(k) for k in ("running", "breathwork", "walking", None, ""))
     print("sync: selftest OK")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--since", help="re-open the window from this date (YYYY-MM-DD)")
+    ap.add_argument("--all", action="store_true", help=f"from {HISTORY_FLOOR}: the whole history, and any missing track")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
     if a.selftest:
         selftest()
         return
-    run(a.since, a.dry_run)
+    run(HISTORY_FLOOR.isoformat() if a.all else a.since, a.dry_run, tracks=a.all)
 
 
 if __name__ == "__main__":

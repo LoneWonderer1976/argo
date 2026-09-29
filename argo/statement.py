@@ -45,7 +45,7 @@ def compose(data: dict, monday: dt.date) -> tuple[str, str, str]:
     week = next((w for w in data["weeks"] if w["monday"] == monday.isoformat()), None)
     if week is None:
         raise SystemExit(f"no week {monday} in the ledger (scheme starts {data['scheme']['start']})")
-    acts = [a for a in data["activities"] if a["week"] == monday.isoformat()]
+    acts = [a for a in data["activities"] if a["week"] == monday.isoformat() and not a.get("history")]
     acts.sort(key=lambda a: a["start_local"])
     page = os.environ.get("PAGE_URL", "")
     pay = os.environ.get("PAY_URL", "")
@@ -102,7 +102,8 @@ def compose_markdown(data: dict, monday: dt.date) -> tuple[str, str]:
     week = next((w for w in data["weeks"] if w["monday"] == monday.isoformat()), None)
     if week is None:
         raise SystemExit(f"no week {monday} in the ledger (scheme starts {data['scheme']['start']})")
-    acts = sorted((a for a in data["activities"] if a["week"] == monday.isoformat()), key=lambda a: a["start_local"])
+    acts = sorted((a for a in data["activities"] if a["week"] == monday.isoformat() and not a.get("history")),
+                  key=lambda a: a["start_local"])
     page = os.environ.get("PAGE_URL", "")
     owed = data["totals"]["owed_pence"]
     title = f"Argo statement: {week['label']} — {rates.gbp(week['pence'])}" + \
@@ -154,8 +155,11 @@ def send(subject: str, text: str, body: str, to: str | None = None) -> None:
 def selftest() -> None:
     d = score.build([{"id": 1, "name": "Run <b>", "sport": "run", "type_key": "running",
                       "start_local": "2026-09-22 16:00:00", "distance_m": 1609.344, "ascent_m": 25.0,
-                      "duration_s": 600, "avg_hr": None, "avg_speed_mps": 2.7}],
-                    {"weeks": {}}, {"exclude": {}})
+                      "duration_s": 600, "avg_hr": None, "avg_speed_mps": 2.7},
+                     {"id": 2, "name": "Before", "sport": "run", "type_key": "running",
+                      "start_local": "2026-04-28 16:00:00", "distance_m": 5000, "ascent_m": 0,
+                      "duration_s": 1500, "avg_hr": 150, "avg_speed_mps": 3.3}],
+                    {"weeks": {}}, {"exclude": {}}, {})     # steps={}: the fixture, never the live steps.json
     os.environ["PAY_URL"] = "https://example.test/pay"
     subj, text, body = compose(d, dt.date(2026, 9, 21))
     assert subj == "Argo: 21–27 Sep 2026 — £1.25 (1 to check)", subj
@@ -164,6 +168,8 @@ def selftest() -> None:
     title, md = compose_markdown(d, dt.date(2026, 9, 21))
     assert title.startswith("Argo statement: 21–27 Sep 2026") and "<!-- argo-week: 2026-09-21 -->" in md
     assert "| `1` |" in md and "⚠ no heart rate" in md and "Easter eggs found this week:" in md and "Reply **paid**" in md
+    _, text, _ = compose(d, dt.date(2026, 4, 27))        # history in the scheme's first week is not on its statement
+    assert "Before" not in text, text
     print("statement: selftest OK")
 
 

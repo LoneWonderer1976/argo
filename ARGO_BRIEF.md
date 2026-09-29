@@ -188,6 +188,46 @@ Because points are derived on every run, a change re-scores the whole history, p
 included — which is what "adjust the variables" should mean, and is also the caveat: lowering a
 rate lowers an *owed* week's figure. A *paid* week keeps its `pence` in the ledger as paid.
 
+## His whole history, and the activities filtered and sorted (29/09/2026)
+
+Thomas asked, through Ben: *"bring his entire Garmin history in, this won't affect pocket money as
+everything prior to the original start date won't count"*, and *"his activities to be both
+filterable and sortable, filter by date, sport etc, sort by distance, time, speed etc"*.
+
+- **History is stored, shown, never paid.** The sync no longer drops what is older than
+  `SCHEME_START`; `score.py` marks such a row `history`, gives it no points and no flags (there is
+  nothing for Ben to adjudicate), and `paid_rows()` keeps it out of every week, every egg, the
+  steps and the totals. The **scheme's start date decides the money, not what the sync happened
+  to fetch** — so moving `scheme_start` earlier in the settings would pay history, which is what
+  that setting should mean. Measured on the import: 45 activities (Jan 2025 → Apr 2026), and the
+  weeks, the eggs and every pound identical before and after.
+- **`python -m argo.sync --all`**, or the *whole history* tick on the sync workflow's form, asks
+  Garmin from 2000 (a query bound, not a rule) and also re-asks for any track a past run missed
+  (two in-scheme maps were missing and came back). A half-second pause between GPX downloads keeps
+  a big import from being a burst.
+- **Garmin's safety records are never stored.** The watch's assistance button logs an
+  "activity" (`typeKey` *assistance*) with the place it was pressed, in the same list as a run.
+  One was in his history (14 March 2026, late evening). It is not exercise and the page is
+  public, so the sync skips any type whose key says *assist* or *incident*. That is held back
+  rather than published because publishing cannot be undone and holding back can; if Ben wants
+  it on the page, it is one word out of `SAFETY_WORDS` and an `--all` run.
+- **The filters are the phone's own.** Sport chips (several at once), *When* (all time, this
+  week, the last 30 days, each year, since Argo began, before Argo, chosen dates), a name search,
+  and ten sorts (newest / oldest, distance, time, speed, climb, most earned, each way). An
+  activity with no distance or no speed sorts LAST whichever way round, so *shortest* does not
+  open on a page of breathing exercises. The choice is remembered in `localStorage`, a per-viewer
+  convenience like the eggs already seen; clearing it keeps the sort.
+- **Speed is the watch's own number**: pace (min/mi) on foot, per 100 m in the pool, mph on
+  wheels and water, from Garmin's `averageSpeed`, which counts stops, so a long hike reads slow.
+  It is Garmin's figure, so it matches the app on his phone.
+- **Everything the list shows is summed**: a line under the filters (count, miles, climb, time,
+  and the money from activities, which is not the hero's *earned ever*, since that has the steps
+  in it), and the Totals table follows the same filter. The list pages at 30, since the history
+  more than tripled it. History cards say *before Argo* where the money would be; the sheet
+  says why, and gained speed and max heart rate.
+- In passing: the score and statement selftests called `build()` without steps, so they read the
+  LIVE `steps.json` and had been failing since his first steps landed on 21/09. They pass `{}` now.
+
 ## Not built, deliberately
 
 - **Screen time.** Ben: *"or possibly screentime or both"*. Points are the currency; a second

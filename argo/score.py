@@ -45,7 +45,11 @@ def flags_for(row: dict) -> list[str]:
 
 def scored_activities(activities: list[dict], excluded: dict, relabel: dict | None = None) -> list[dict]:
     """`relabel` is overrides["sport"]: Ben's word on what an activity was when the watch said
-    "other" (a kayak logged as Other, 20/09/2026). Applied before pricing and before the flags."""
+    "other" (a kayak logged as Other, 20/09/2026). Applied before pricing and before the flags.
+
+    An activity from before SCHEME_START is HISTORY (Thomas, 29/09/2026: his whole Garmin
+    history on the page): shown, never paid -- no points, no flags (there is nothing for Ben to
+    adjudicate), and no part in a week, an egg or a total. `paid_rows()` is the scheme's view."""
     out = []
     relabel = relabel or {}
     for a in activities:
@@ -54,23 +58,27 @@ def scored_activities(activities: list[dict], excluded: dict, relabel: dict | No
         if str(a["id"]) in relabel:
             a = {**a, "sport": relabel[str(a["id"])], "relabelled": True}
         day = dt.date.fromisoformat(a["start_local"][:10])
-        if day < rates.SCHEME_START:
-            continue
+        history = day < rates.SCHEME_START
         ex = excluded.get(str(a["id"]))
-        pts = rates.points_for(a["sport"], a.get("distance_m"), a.get("ascent_m")) if ex is None \
+        pts = rates.points_for(a["sport"], a.get("distance_m"), a.get("ascent_m")) if ex is None and not history \
             else {"distance": 0.0, "ascent": 0.0}
         total = pts["distance"] + pts["ascent"]
         out.append({
             "id": a["id"], "name": a["name"], "sport": a["sport"], "type_key": a.get("type_key"),
             "date": day.isoformat(), "start_local": a["start_local"], "week": week_for(a["start_local"]).isoformat(),
             "distance_m": a.get("distance_m"), "ascent_m": a.get("ascent_m"), "duration_s": a.get("duration_s"),
-            "avg_hr": a.get("avg_hr"), "avg_speed_mps": a.get("avg_speed_mps"),
+            "avg_hr": a.get("avg_hr"), "max_hr": a.get("max_hr"), "avg_speed_mps": a.get("avg_speed_mps"),
             "points": round(total, 3), "points_distance": round(pts["distance"], 3), "points_ascent": round(pts["ascent"], 3),
             "pence_share": rates.pence(total),
-            "flags": flags_for(a), "excluded": ex, "has_track": store.has_track(a["id"]),
-            "relabelled": bool(a.get("relabelled")),
+            "flags": [] if history else flags_for(a), "excluded": ex, "has_track": store.has_track(a["id"]),
+            "relabelled": bool(a.get("relabelled")), "history": history,
         })
     return out
+
+
+def paid_rows(rows: list[dict]) -> list[dict]:
+    """The rows the scheme counts: everything from SCHEME_START. History is for the page only."""
+    return [r for r in rows if not r["history"]]
 
 
 def steps_rows(steps: dict, rows: list[dict]) -> list[dict]:
@@ -146,7 +154,8 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
     ledger = store.ledger() if ledger is None else ledger
     overrides = store.overrides() if overrides is None else overrides
     steps = store.steps() if steps is None else steps
-    rows = scored_activities(activities, overrides.get("exclude", {}), overrides.get("sport", {}))
+    every = scored_activities(activities, overrides.get("exclude", {}), overrides.get("sport", {}))
+    rows = paid_rows(every)
     days = steps_rows(steps, rows)
     weeks = weeks_from(rows, ledger, days)
     won = milestones.achieved(rows, days=days)
@@ -158,7 +167,7 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
     paid_pence = sum(w["pence"] for w in weeks if w["status"] == "paid")
     owed_pence = sum(w["pence"] for w in weeks if w["status"] == "owed")
     current = next((w for w in weeks if w["status"] == "current"), None)
-    rows.sort(key=lambda r: r["start_local"], reverse=True)
+    every.sort(key=lambda r: r["start_local"], reverse=True)
     return {
         "built_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "today": today_uk().isoformat(),
@@ -177,12 +186,12 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
             "pence": sum(w["pence"] for w in weeks),
             "paid_pence": paid_pence, "owed_pence": owed_pence,
             "current_pence": current["pence"] if current else 0,
-            "activities": len(rows),
+            "activities": len(rows), "history": len(every) - len(rows),     # the scheme's, and the ones before it
             "distance_m": round(sum(r["distance_m"] or 0 for r in rows), 1),
             "ascent_m": round(sum(r["ascent_m"] or 0 for r in rows), 1),
         },
         "weeks": weeks,
-        "activities": rows,
+        "activities": every,        # history included: the page shows it, nothing Python-side pays it
         "steps": list(reversed(days)),
         # the Easter eggs: only the WON ones leave the server; the rest are a number
         "milestones": {"won": list(reversed(won)), "hidden": len(milestones.MILESTONES) - len(won),
@@ -220,7 +229,7 @@ def print_table(data: dict) -> None:
     t = data["totals"]
     print(f"Argo -- {t['activities']} activities, {t['points']:.1f} points, {rates.gbp(t['pence'])} "
           f"(paid {rates.gbp(t['paid_pence'])}, owed {rates.gbp(t['owed_pence'])}, "
-          f"this week {rates.gbp(t['current_pence'])})")
+          f"this week {rates.gbp(t['current_pence'])}); {t['history']} from before the scheme, unpaid")
     for w in data["weeks"]:
         print(f"  {w['label']:>22}  {w['status']:7}  {w['n_activities']:2} acts  {w['points']:6.1f} pts  "
               f"{rates.gbp(w['pence']):>8}" + ("  CAPPED" if w["capped"] else "")
@@ -230,6 +239,8 @@ def print_table(data: dict) -> None:
         note = " | ".join(r["flags"]) if r["flags"] else ""
         if r["excluded"]:
             note = f"STRUCK: {r['excluded']}"
+        if r["history"]:
+            note = "before the scheme"
         print(f"    {r['start_local'][:16]}  {r['sport']:5}  {(r['distance_m'] or 0) / 1000:5.1f} km "
               f"{(r['ascent_m'] or 0):4.0f} m  {r['points']:5.1f} pts  {r['name']}" + (f"  [{note}]" if note else ""))
 
@@ -261,9 +272,14 @@ def selftest() -> None:
     d = build(acts, ledger, {"exclude": {"3": "that was the car"}, "sport": {"4": "kayak"}}, {})
     rows = {r["id"]: r for r in d["activities"]}
     assert rows[4]["sport"] == "kayak" and rows[4]["points"] > 0 and rows[4]["relabelled"] and rows[4]["flags"] == []
-    d = build(acts, ledger, {"exclude": {"3": "that was the car"}})
+    d = build(acts, ledger, {"exclude": {"3": "that was the car"}}, {})     # {}: never the live steps.json
     rows = {r["id"]: r for r in d["activities"]}
-    assert 5 not in rows, "before SCHEME_START must not score"
+    h = rows[5]      # 30 April, the week the scheme opened in: history, shown and unpaid
+    assert h["history"] and h["points"] == 0.0 and h["pence_share"] == 0 and h["flags"] == [], h
+    assert all(5 not in w["activities"] for w in d["weeks"]), "history must not enter a week"
+    assert {x["monday"]: x for x in d["weeks"]}["2026-04-27"]["status"] == "empty"
+    assert d["totals"]["activities"] == 4 and d["totals"]["history"] == 1
+    assert not any(r["history"] for r in paid_rows(d["activities"]))
     assert rows[1]["points"] == 5.0 and rows[1]["flags"] == []
     assert rows[2]["points"] == 11.0 and rows[2]["flags"] == ["no heart rate recorded"]
     assert rows[3]["points"] == 0.0 and rows[3]["excluded"] == "that was the car"
@@ -286,7 +302,7 @@ def selftest() -> None:
     old = rates.WEEK_CAP_POINTS
     rates.WEEK_CAP_POINTS = 10.0
     try:
-        w = {x["monday"]: x for x in build(acts, ledger, {"exclude": {}})["weeks"]}["2026-09-21"]
+        w = {x["monday"]: x for x in build(acts, ledger, {"exclude": {}}, {})["weeks"]}["2026-09-21"]
         assert w["capped"] and w["points"] == 16.0 and w["points_paid_for"] == 10.0 and w["pence"] == 250
     finally:
         rates.WEEK_CAP_POINTS = old

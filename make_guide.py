@@ -92,7 +92,8 @@ A(PageBreak())
 A(Paragraph("Argo — the week", H2))
 A(Paragraph("The week runs <b>Monday to Sunday</b>, UK time. The ledger pays from <b>1 May 2026</b>; the Easter eggs and "
             "the steps count from <b>21 September 2026</b>. Everything is derived from the stored activities on every "
-            "run, so a rule change re-scores every week.", P))
+            "run, so a rule change re-scores every week. His whole Garmin history is on the page as well; anything "
+            "before 1 May 2026 says <i>before Argo</i> and never earns.", P))
 A(Paragraph("What it pays (the defaults — every one is a setting, see <i>Changing the rules</i>)", H3))
 A(table([
     ["", "points", "money at 25p a point"],
@@ -189,6 +190,7 @@ cd C:\\Argo
 python check.py                       # every selftest + pyflakes (run after any edit)
 python -m argo.sync --dry-run         # what Garmin has that we do not, without fetching
 python -m argo.sync                   # fetch it (the Action does this hourly anyway)
+python -m argo.sync --all             # his whole history, and any track a past run missed
 python -m argo.score --print          # the ledger as a table; rebuilds docs/data.json
 python -m argo.statement --print      # the last completed week's statement, printed
 python -m argo.pay                    # dry run: the oldest unpaid week   (--apply to mark it)
@@ -250,7 +252,7 @@ A(table([
     ["seven minutes past every hour", "sync: Garmin → data → page (both apps). Commits only when something new landed.", "Actions → sync"],
     ["Sunday ~21:45", "Argo's statement issue opens (it syncs first, so a Sunday-afternoon ride is on it)", "Actions → statement; Issues"],
     ["when you reply", "Argo's paid workflow reads the first line of your comment and acts on it", "Actions → paid"],
-    ["when you run it", "settings (Argo), pay (Argo)", "Actions → the workflow → Run workflow"],
+    ["when you run it", "settings (Argo), pay (Argo); sync with 'whole history' ticked re-reads all of Garmin", "Actions → the workflow → Run workflow"],
 ], [40 * mm, 84 * mm, 46 * mm]))
 A(Paragraph("The page not updating", H3))
 A(Paragraph("Open Actions and look at the latest <i>sync</i>. Green: the page updates within a minute or two (GitHub's "

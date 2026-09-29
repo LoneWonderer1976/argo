@@ -52,12 +52,26 @@
 
   <section>
     <h2>Activities</h2>
+    <div class="filters">
+      <div id="f-sport" class="chips" role="group" aria-label="sport"></div>
+      <div class="f-row">
+        <label class="f-field"><span>When</span><select id="f-when"></select></label>
+        <label class="f-field"><span>Sort</span><select id="f-sort"></select></label>
+      </div>
+      <div id="f-dates" class="f-row" hidden>
+        <label class="f-field"><span>From</span><input type="date" id="f-from"></label>
+        <label class="f-field"><span>To</span><input type="date" id="f-to"></label>
+      </div>
+      <input type="search" id="f-q" class="f-q" placeholder="Search by name…" aria-label="search by name" autocomplete="off">
+    </div>
+    <div class="acts-summary"><span id="acts-summary"></span><button type="button" id="f-reset" class="linkbtn" hidden>Clear</button></div>
     <div id="activities" class="cards"></div>
+    <button type="button" id="more" class="more" hidden></button>
     <p id="empty" class="muted" hidden>Nothing yet — go and do something!</p>
   </section>
 
   <section>
-    <h2>Totals</h2>
+    <h2>Totals <span id="totals-sub" class="muted"></span></h2>
     <table id="sports" class="table"><thead><tr><th>sport</th><th>times</th><th>distance</th><th>climb</th><th>points</th></tr></thead><tbody></tbody></table>
   </section>
 
