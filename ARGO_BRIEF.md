@@ -203,8 +203,9 @@ filterable and sortable, filter by date, sport etc, sort by distance, time, spee
   weeks, the eggs and every pound identical before and after.
 - **`python -m argo.sync --all`**, or the *whole history* tick on the sync workflow's form, asks
   Garmin from 2000 (a query bound, not a rule) and also re-asks for any track a past run missed
-  (two in-scheme maps were missing and came back). A half-second pause between GPX downloads keeps
-  a big import from being a burst.
+  (a failed GPX download stores the activity without its map; in the trial import two failed the
+  first time and came back on the retry, and the real one needed none: 60 tracks for 60). A
+  half-second pause between GPX downloads keeps a big import from being a burst.
 - **Garmin's safety records are never stored.** The watch's assistance button logs an
   "activity" (`typeKey` *assistance*) with the place it was pressed, in the same list as a run.
   One was in his history (14 March 2026, late evening). It is not exercise and the page is
