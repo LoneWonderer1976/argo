@@ -229,11 +229,114 @@ filterable and sortable, filter by date, sport etc, sort by distance, time, spee
 - In passing: the score and statement selftests called `build()` without steps, so they read the
   LIVE `steps.json` and had been failing since his first steps landed on 21/09. They pass `{}` now.
 
+## The weekly bounty (08/10/2026)
+
+Ben: *"every sunday night I want to generate a bounty mission for Tom, the bounty mission will be
+a target activity, distance, elevation, number or amount and will pay a fixed amount, a
+multiplier or some other bounty on his usual pocket money, for example If you cycle 10 miles this
+week you will receive double pocket money for your cycling distance, i would like control over
+it so need a tool to let me select the week's bounty, happy for this to be auto and i rubber
+stamp or veto"*, and *"thrash out this idea for me before building"*. The design was thrashed
+out first. His answers came the same evening, then *"sounds good, lean on cycling as he likes to
+get out on his bike and can do that independently"*. Built that night: `argo/bounty.py`.
+
+**Measured first** (his last 12 complete weeks, to 4 October): he went out in 8 of them. Most
+of those weeks had one outing; a few had two or three. He covered 4 to 14 miles a week, mostly
+walking, and **rode in only 2 of the 12 weeks**. There has been no run, swim or kayak since May,
+and he averages 8–9k steps a day. So the bounty's main job is a second outing in a one-outing
+week, and a first in an empty one. *Two outings this week* would have been hit in 4 of the 12.
+
+**Ben's rulings:**
+
+| | |
+|---|---|
+| Silence | **held until he approves.** Nothing reaches Tom's page without his yes. A proposal not approved by the week's end lapses (the next Sunday's proposal closes its issue) |
+| Rewards | **all four:** a fixed bonus; a multiplier on the target's money (*double your cycling money*); a multiplier on the whole week; a real-world reward he honours by hand, from a list he writes (none yet: the sheet carries one example line, switched off) |
+| The bar | **his ranges only.** Each menu line carries a min–max, and the draw takes a step inside it. The proposal still prints how often his last 12 weeks would have hit it, as information, not a rule |
+| Shape | **one bar.** Hit it, get it: no stretch rung, no partial credit |
+| Weight | **lean on cycling.** The starter menu gives the five cycling lines 14 of 23 weight, about 61 % of draws |
+
+**What was built. These are my readings; Ben may overrule any of them:**
+
+- **The menu is his: two sheets that open in Excel**, `data/bounty_targets.csv` and
+  `data/bounty_rewards.csv`. The brief's first draft said one file; two keep each sheet's
+  columns honest.
+  - A target line has `on`, `weight`, `sports`, `metric`, `counted` (`week` or `one` outing),
+    `min`, `max`, `step` and `words` (`{bar}` is the number).
+  - The sports are `run`, `walk`, `cycle`, `swim`, `kayak`, `foot` (walk and run) and `any`, or
+    several separated by spaces.
+  - The metrics are `miles`, `climb_m`, `hours`, `outings`, `days`, `sports`, `steps` and
+    `steps_days`.
+  - A reward line has a `type` (`fixed`, `target_x`, `week_x` or `real`), `min`, `max` and
+    `step` (pounds for a fixed bonus, the multiplier otherwise), `cap` in pounds (blank means no
+    cap) and `words` for a treat.
+  - A bad line is refused with its line number, and the Sunday run fails loudly rather than
+    drawing from half a menu. Excel's UTF-8 BOM and its plain cp1252 CSV are both read.
+- **The starter menu** has 14 targets and 3 rewards:
+  - **Cycling:** 8–15 miles a week; one ride of 6–12; 2–3 rides; 150–300 m climbed; 1.5–3 hours.
+  - **The rest:** 2–3 outings; 2–4 active days; 5–10 miles walked; one walk of 4–7; 200–400 m
+    climbed on foot; 2–4 hours moving; 10k steps on 3–5 days; a 1–3 mile run; two sports.
+  - **Rewards:** £1–£3 fixed; double the target's money; ×1.5 the week. Both multipliers are
+    capped at +£5.
+  - **Measured on the menu:** the low ends of the cycling lines would each have been hit in only
+    0–1 of his last 12 weeks, against 2–7 for the rest. That is what *lean on cycling* asks of
+    him, not a pricing error; Ben has the numbers (`python -m argo.bounty` prints them) and the
+    ranges are his.
+- **"The target's money"** means everything the bounty's sports earned that week, distance and
+  climb, so *double your cycling money* doubles the week's cycling. A steps bounty doubles the
+  steps money. Doubling only the metric's own channel would have made a doubled *climb 150 m on
+  your bike* worth 37p.
+- **An outing counts toward a bar from 1 mile or 20 minutes** (`BOUNTY_OUTING_MIN_*`, settings).
+  `MIN_DISTANCE_M`'s 100 m would make two strolls to the gate two outings.
+- **No speed or pace bounties.** A speed bar rewards rushing on a bike on the roads, and speed
+  is where a car journey passing as a ride would show.
+- **The weekly cycle:**
+  - **Sunday:** `statement.yml`'s second job, which runs after the statement whatever it did,
+    draws next week's bounty (`--propose`). The draw is seeded by the week, never repeats last
+    week's target, and skips a week that already has one. The job closes any open bounty issue
+    as lapsed, then opens the new one with the week marker `<!-- argo-bounty: ... -->`.
+  - **Ben's reply** goes to `paid.yml`'s second job. It is the same workflow as the paid replies
+    on purpose: two workflows woken by one comment share the `argo-data` concurrency group, and a
+    second pending run cancels the first.
+  - **Every line of the reply is read**, unlike the statement's first-line rule. Lines that are
+    not commands (a signature) are skipped, and the quoted email below stops the reading. So
+    `target cycle_miles 10` / `reward x2` / `approve` works in one email.
+  - **The form:** `bounty.yml` takes the same lines from a form.
+  - **On the PC:** `python -m argo.bounty --do ... --apply`. When no week is named it means the
+    week waiting for a decision, else next week.
+- **The only stored state is `data/bounties.json`**: the target, the reward, the status
+  (`proposed`, `live` or `vetoed`), the dates, who set it and the roll count. Whether it was hit
+  is `progress()`, run by `score.weeks_from` on every build, strikes included. **Once hit, its
+  money is part of the week's `pence`** (`pence_points` keeps the points' share), outside
+  `WEEK_CAP_POINTS`. A paid week keeps its ledger figure as ever.
+- **An approval mid-week counts the whole week from Monday.** Tom cannot have aimed at a bounty
+  he could not see, so this is generous, not gameable. Approving a week that has ended is refused.
+- **A live bounty is a promise.** A veto, a reroll or a new target is refused once he can see
+  it. A bar may only come down, and a reward may only be more of the same kind, with a cap no
+  lower. A hand-typed multiplier is capped at `BOUNTY_CAP_PENCE` (£5) unless the reply says
+  `cap £N` or `cap none`.
+- **A missed bounty pays nothing and says nothing to him**: no *failed* stamp, no streak. The
+  statement tells Ben it was not hit, with how close he got.
+- **His page.** data.json carries a LIVE bounty only, as `bounty.current` or, once approved
+  before its week, `bounty.next` ("Starts on Monday"); a proposal never leaves the server.
+  - **The poster:** a wanted poster above the trophies, with a progress bar, what is left, the
+    days left, and *worth £x right now* for a multiplier.
+  - **On a hit:** a fanfare through the Easter-egg overlay, once a phone (`argo.bounty.seen` in
+    localStorage), and a CLAIMED stamp.
+  - **The weeks list:** a hit week's row carries a 🎯.
+- **The statement** has a bounty line, hit (when and what it adds, a treat to honour by hand) or
+  not hit (how close). The week's money reads as points plus bounty.
+- **Rehearsed on a copy** of the repo (propose, reroll, an email-shaped reply that sets a target,
+  a reward and approves, the score, a veto refused once live), and on the page with an injected
+  bounty in all three states, at phone width.
+- **Not built:** letting Tom choose one of three. The page cannot take a click, so his choice
+  would have to come through Ben.
+
 ## Not built, deliberately
 
 - **Screen time.** Ben: *"or possibly screentime or both"*. Points are the currency; a second
   exchange rate is a second column in the ledger and nothing in the scoring. Wait for the rates.
-- **Streaks, bonuses, badges.** The brief was simple. A weekly cap comes first if anything does.
+- **Streaks, badges.** The brief was simple. A weekly cap comes first if anything does. (The one bonus, the weekly bounty, is Ben's own design of 08/10/2026, above.)
 - **A sixth sport.** `sports.py` maps Garmin's type keys by their words; an unlisted sport reads
   as `other`, earns nothing and is flagged, so the first time he logs one it appears on the
   statement and Ben can say whether it pays.

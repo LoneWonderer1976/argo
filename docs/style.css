@@ -3,17 +3,20 @@
   --hero: #0f2a44; --hero-ink: #ffffff; --hero-muted: #9fb3c8; --accent: #f2b134;
   --paid: #2e8b57; --owed: #d9822b; --current: #3b82f6; --flag: #fff3cd;
   --empty: #9aa3ad; --run: #e4572e; --walk: #2e8b57; --cycle: #3b82f6; --swim: #0ea5b7; --kayak: #7c3aed; --other: #9aa3ad;
+  --poster: #f7ecd2; --poster-ink: #3b2f17; --poster-line: #c9a96a;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0d1420; --card: #16202e; --ink: #e8edf3; --muted: #93a0b0; --line: #26313f;
     --hero: #0a1a2c; --flag: #4a3d12;
+    --poster: #2f2817; --poster-ink: #f3e6c8; --poster-line: #6b5a35;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0d1420; --card: #16202e; --ink: #e8edf3; --muted: #93a0b0; --line: #26313f;
   --hero: #0a1a2c; --flag: #4a3d12;
+  --poster: #2f2817; --poster-ink: #f3e6c8; --poster-line: #6b5a35;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink);
@@ -100,6 +103,20 @@ main { padding: 0 16px calc(24px + env(safe-area-inset-bottom)); max-width: 720p
 .flags { margin-top: 10px; font-size: .9rem; }
 .flags .flag { background: var(--flag); border-radius: 8px; padding: 6px 10px; margin-top: 6px; }
 .flags .note { background: var(--bg); color: var(--muted); border-radius: 8px; padding: 6px 10px; margin-top: 6px; }
+
+/* the bounty: a wanted poster (Ben, 08/10/2026) */
+.bounty { position: relative; overflow: hidden; margin-top: 16px; background: var(--poster); color: var(--poster-ink);
+  border: 2px solid var(--poster-line); border-radius: 14px; padding: 14px 16px; box-shadow: 0 3px 0 var(--poster-line); }
+.b-kicker { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+.b-words { font-family: Georgia, "Times New Roman", serif; font-size: 1.45rem; font-weight: 700; line-height: 1.2; margin: 6px 0 8px; }
+.bounty.met .b-words { padding-right: 88px; }
+.b-reward { font-size: .95rem; }
+.b-bar { height: 12px; border-radius: 999px; background: rgba(0,0,0,.12); margin: 12px 0 6px; overflow: hidden; }
+.b-bar div { height: 100%; background: var(--accent); border-radius: 999px; }
+.bounty.met .b-bar div { background: var(--paid); }
+.b-meta { font-size: .88rem; margin-top: 4px; }
+.b-stamp { position: absolute; top: 16px; right: 10px; transform: rotate(10deg); border: 3px solid var(--paid); color: var(--paid);
+  font-weight: 800; letter-spacing: .12em; text-transform: uppercase; padding: 2px 8px; border-radius: 6px; font-size: .85rem; }
 
 .trophies { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
 .trophy { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; cursor: pointer; }

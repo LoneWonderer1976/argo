@@ -19,7 +19,7 @@ OUT = Path(__file__).resolve().parent / "Argo_and_Atlas_guide.pdf"
 ss = getSampleStyleSheet()
 H1 = ParagraphStyle("h1", parent=ss["Heading1"], fontSize=20, spaceAfter=6, textColor=colors.HexColor("#0f2a44"))
 H2 = ParagraphStyle("h2", parent=ss["Heading2"], fontSize=13.5, spaceBefore=12, spaceAfter=4, textColor=colors.HexColor("#0f2a44"))
-H3 = ParagraphStyle("h3", parent=ss["Heading3"], fontSize=11, spaceBefore=8, spaceAfter=2)
+H3 = ParagraphStyle("h3", parent=ss["Heading3"], fontSize=11, spaceBefore=8, spaceAfter=2, keepWithNext=1)
 P = ParagraphStyle("p", parent=ss["BodyText"], fontSize=9.6, leading=13, alignment=TA_LEFT, spaceAfter=4)
 SMALL = ParagraphStyle("small", parent=P, fontSize=8.6, leading=11.5, textColor=colors.HexColor("#555555"))
 CODE = ParagraphStyle("code", parent=ss["Code"], fontName="Courier", fontSize=8.8, leading=11.5,
@@ -137,6 +137,32 @@ A(Paragraph("118 hidden milestones, each with its own message — first mile, tw
             "full-screen fanfare when he next opens the page, and a cabinet lists the ones he has. Only won eggs leave "
             "the server, so nothing on the page spoils the rest. The list is <font face='Courier'>C:\\Argo\\argo\\milestones.py</font>.", P))
 
+A(Paragraph("The weekly bounty", H3))
+A(Paragraph("One mission a week on top of his pocket money: a target (<i>Ride 10 miles this week</i>), one bar, one "
+            "reward. A reward is a fixed bonus, a multiplier on that sport's money or on the whole week (capped), or a "
+            "real-world treat you hand over yourself. On <b>Sunday night</b>, after the statement, a second issue opens "
+            "with <b>next week's bounty, drawn from your menu</b>, and how often his last 12 weeks would have hit it. "
+            "Thomas cannot see it until you approve it. Reply with one line, or several:", P))
+A(table([
+    ["reply", "what happens"],
+    ["approve", "it goes on his page as a wanted poster with a progress bar"],
+    ["veto", "no bounty that week (or let it lapse: an unapproved one goes with its week)"],
+    ["reroll", "draw another from the menu"],
+    ["bar 8", "a different bar"],
+    ["reward £3 / x2 / week x1.5", "a different reward; add cap £4 after a multiplier"],
+    ["reward treat you choose the takeaway", "a real-world reward, for you to hand over"],
+    ["target cycle_miles 10", "another line of the menu (its key), and its bar if you name one"],
+], [48 * mm, 122 * mm]))
+A(Paragraph("<b>Once he can see it, it can only get easier or bigger</b>: a lower bar, or more of the same reward; "
+            "never withdrawn, never harder. When he hits it he gets a fanfare and the money joins that week's statement. "
+            "A miss just goes away: he never sees a <i>failed</i>. The same lines work from Actions → <i>bounty</i> → "
+            "<i>Run workflow</i>.", SMALL))
+A(Paragraph("<b>The menu is yours</b>, in two files that open in Excel: <font face='Courier'>data/bounty_targets.csv</font> "
+            "(what a bounty asks; each line is on or off, with a weight, sports, a metric, the week or one outing, the "
+            "min–max its bar is drawn from, and the words he reads, where {bar} is the number) and "
+            "<font face='Courier'>data/bounty_rewards.csv</font> (what it pays, in pounds). Cycling carries most of the "
+            "weight, since he can get out on his bike on his own.", SMALL))
+
 # ------------------------------------------------------------------ Argo settings
 A(PageBreak())
 A(Paragraph("Argo — changing the rules (the admin panel)", H2))
@@ -197,6 +223,8 @@ python -m argo.pay                    # dry run: the oldest unpaid week   (--app
 python -m argo.pay --through 2026-09-14 --apply      # settle every unpaid week up to that Monday
 python -m argo.pay --strike 12345678 --reason "the car" --apply
 python -m argo.pay --sport 12345678 kayak --apply
+python -m argo.bounty                 # this week's and next week's bounty, and the menu
+python -m argo.bounty --do "approve" --apply          # the same lines as a reply on the bounty issue
 python -m argo.demo                   # a made-up data.json to look at the page design
 git add data docs && git commit -m "why" && git push   # PC changes reach the page this way
 """))

@@ -32,6 +32,10 @@
 </header>
 
 <main>
+  <section id="bounty-section" hidden>
+    <div id="bounty" class="bounty"></div>
+  </section>
+
   <section id="trophies-section">
     <h2>Trophies <span id="trophy-count" class="muted"></span></h2>
     <div id="trophies" class="trophies"></div>
@@ -84,8 +88,8 @@
 
 <div id="egg" class="egg" hidden>
   <div class="egg-inner">
-    <div class="egg-burst">🏆</div>
-    <div class="egg-kicker">You found an Easter egg!</div>
+    <div class="egg-burst" id="egg-burst">🏆</div>
+    <div class="egg-kicker" id="egg-kicker">You found an Easter egg!</div>
     <div id="egg-title" class="egg-title"></div>
     <div id="egg-message" class="egg-message"></div>
     <div id="egg-date" class="muted small"></div>

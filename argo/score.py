@@ -17,6 +17,7 @@ import datetime as dt
 import json
 import shutil
 
+from . import bounty as bounties_
 from . import milestones, rates, store
 from .weeks import last_week, this_week, today_uk, week_for, week_label, week_of
 
@@ -100,8 +101,10 @@ def steps_rows(steps: dict, rows: list[dict]) -> list[dict]:
     return out
 
 
-def weeks_from(rows: list[dict], ledger: dict, days: list[dict] | None = None) -> list[dict]:
-    """One entry per week from the week of SCHEME_START to this week, newest first, empty weeks included."""
+def weeks_from(rows: list[dict], ledger: dict, days: list[dict] | None = None, bounties: dict | None = None) -> list[dict]:
+    """One entry per week from the week of SCHEME_START to this week, newest first, empty weeks included.
+    A week's LIVE bounty (`bounties`: data/bounties.json's "weeks") is judged here like everything
+    else, and once hit its money is part of the week's pence -- outside the cap, which is for points."""
     by_week: dict[str, list[dict]] = {}
     for r in rows:
         by_week.setdefault(r["week"], []).append(r)
@@ -128,13 +131,18 @@ def weeks_from(rows: list[dict], ledger: dict, days: list[dict] | None = None) -
             s["distance_m"] += r["distance_m"] or 0
             s["ascent_m"] += r["ascent_m"] or 0
             s["points"] += r["points"]
+        rec = (bounties or {}).get(key)
+        bounty = None
+        if rec and rec.get("status") == "live":
+            bounty = bounties_.view(key, rec, bounties_.progress(rec, acts, sdays, capped))
+        pence = rates.pence(capped) + (bounty["bonus_pence"] if bounty else 0)
         entry = {
             "monday": key, "label": week_label(monday),
             # a complete week that earned nothing is "empty": neither owed nor waiting to be paid
             "status": "paid" if key in paid else ("current" if monday == end else
-                                                 ("owed" if rates.pence(capped) else "empty")),
+                                                 ("owed" if pence else "empty")),
             "points": round(pts, 3), "points_paid_for": round(capped, 3), "capped": capped < pts,
-            "pence": rates.pence(capped), "activities": [r["id"] for r in acts],
+            "pence": pence, "pence_points": rates.pence(capped), "bounty": bounty, "activities": [r["id"] for r in acts],
             "n_activities": len(acts), "n_flagged": sum(1 for r in acts if r["flags"] and not r["excluded"]),
             "by_sport": {k: {kk: round(vv, 3) if isinstance(vv, float) else vv for kk, vv in v.items()}
                          for k, v in by_sport.items()},
@@ -149,15 +157,20 @@ def weeks_from(rows: list[dict], ledger: dict, days: list[dict] | None = None) -
 
 
 def build(activities: list[dict] | None = None, ledger: dict | None = None,
-          overrides: dict | None = None, steps: dict | None = None) -> dict:
+          overrides: dict | None = None, steps: dict | None = None, bounties: dict | None = None) -> dict:
     activities = store.activities() if activities is None else activities
     ledger = store.ledger() if ledger is None else ledger
     overrides = store.overrides() if overrides is None else overrides
     steps = store.steps() if steps is None else steps
+    recs = (store.bounties() if bounties is None else bounties).get("weeks", {})
     every = scored_activities(activities, overrides.get("exclude", {}), overrides.get("sport", {}))
     rows = paid_rows(every)
     days = steps_rows(steps, rows)
-    weeks = weeks_from(rows, ledger, days)
+    weeks = weeks_from(rows, ledger, days, recs)
+    # his page's poster: this week's LIVE bounty, or next week's once Dad has said yes to it. A
+    # proposal never leaves the server -- he sees a bounty only when it is a promise.
+    nxt = (this_week() + dt.timedelta(days=7)).isoformat()
+    upcoming = recs.get(nxt) if (recs.get(nxt) or {}).get("status") == "live" else None
     won = milestones.achieved(rows, days=days)
     by_week_won: dict[str, list] = {}
     for m in won:
@@ -191,6 +204,8 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
             "ascent_m": round(sum(r["ascent_m"] or 0 for r in rows), 1),
         },
         "weeks": weeks,
+        "bounty": {"current": current["bounty"] if current else None,
+                   "next": bounties_.view(nxt, upcoming, bounties_.progress(upcoming, [], [])) if upcoming else None},
         "activities": every,        # history included: the page shows it, nothing Python-side pays it
         "steps": list(reversed(days)),
         # the Easter eggs: only the WON ones leave the server; the rest are a number
@@ -260,7 +275,7 @@ def selftest() -> None:
     ]
     ledger = {"weeks": {"2026-09-21": {"paid_on": "2026-09-28"}}}
     steps = {"2026-09-22": {"steps": 14000}, "2026-09-23": {"steps": 8000}, "2026-09-30": {"steps": 11000}, "2026-09-20": {"steps": 99999}}
-    d = build(acts, ledger, {"exclude": {"3": "that was the car"}, "sport": {"4": "kayak"}}, steps)
+    d = build(acts, ledger, {"exclude": {"3": "that was the car"}, "sport": {"4": "kayak"}}, steps, {})
     days = {x["date"]: x for x in d["steps"]}
     assert "2026-09-20" not in days, "before STEPS_START must not count"
     assert days["2026-09-22"]["miles_on_foot"] == 1.0 and days["2026-09-22"]["deducted"] == 0   # gross: the mile run costs nothing
@@ -269,10 +284,10 @@ def selftest() -> None:
     w = {x["monday"]: x for x in d["weeks"]}
     assert w["2026-09-21"]["steps_points"] == 4.4 and w["2026-09-21"]["points"] == 20.4 and w["2026-09-21"]["pence"] == 510
     assert w["2026-09-28"]["steps_points"] == 2.2 and w["2026-09-28"]["pence"] == 241   # 2.2 pts of steps + the relabelled kayak
-    d = build(acts, ledger, {"exclude": {"3": "that was the car"}, "sport": {"4": "kayak"}}, {})
+    d = build(acts, ledger, {"exclude": {"3": "that was the car"}, "sport": {"4": "kayak"}}, {}, {})
     rows = {r["id"]: r for r in d["activities"]}
     assert rows[4]["sport"] == "kayak" and rows[4]["points"] > 0 and rows[4]["relabelled"] and rows[4]["flags"] == []
-    d = build(acts, ledger, {"exclude": {"3": "that was the car"}}, {})     # {}: never the live steps.json
+    d = build(acts, ledger, {"exclude": {"3": "that was the car"}}, {}, {})     # {}: never the live steps.json or bounties
     rows = {r["id"]: r for r in d["activities"]}
     h = rows[5]      # 30 April, the week the scheme opened in: history, shown and unpaid
     assert h["history"] and h["points"] == 0.0 and h["pence_share"] == 0 and h["flags"] == [], h
@@ -302,10 +317,18 @@ def selftest() -> None:
     old = rates.WEEK_CAP_POINTS
     rates.WEEK_CAP_POINTS = 10.0
     try:
-        w = {x["monday"]: x for x in build(acts, ledger, {"exclude": {}}, {})["weeks"]}["2026-09-21"]
+        w = {x["monday"]: x for x in build(acts, ledger, {"exclude": {}}, {}, {})["weeks"]}["2026-09-21"]
         assert w["capped"] and w["points"] == 16.0 and w["points_paid_for"] == 10.0 and w["pence"] == 250
     finally:
         rates.WEEK_CAP_POINTS = old
+    # the bounty: a LIVE one's money joins the week (outside the cap); a proposed one is invisible
+    live = {"target": {"key": "k", "sports": "cycle", "metric": "miles", "counted": "week", "bar": 10, "words": ""},
+            "reward": {"key": "r", "type": "fixed", "value": 200, "cap_pence": None, "words": ""}, "status": "live"}
+    for status, extra in (("live", 200), ("proposed", 0), ("vetoed", 0)):
+        w = {x["monday"]: x for x in build(acts, ledger, {"exclude": {}}, {}, {"weeks": {"2026-09-28": {**live, "status": status}}})["weeks"]}["2026-09-28"]
+        assert w["pence"] == w["pence_points"] + extra and (w["bounty"] is not None) == (status == "live"), (status, w)
+    w = {x["monday"]: x for x in build(acts, ledger, {"exclude": {"3": "the car"}}, {}, {"weeks": {"2026-09-28": live}})["weeks"]}["2026-09-28"]
+    assert w["bounty"]["met"] is False and w["pence"] == w["pence_points"], "a struck ride must not hit a bounty"
     assert last_week() < this_week()
     print("score: selftest OK")
 

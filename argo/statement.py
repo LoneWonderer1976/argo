@@ -40,6 +40,22 @@ def _fmt_dur(s) -> str:
     return f"{s // 3600}h {s % 3600 // 60:02d}m" if s >= 3600 else f"{s // 60} min"
 
 
+def bounty_line(week: dict) -> str | None:
+    """The week's bounty, for Dad: hit or not, and what it adds. Only a LIVE one is on a week."""
+    b = week.get("bounty")
+    if not b:
+        return None
+    if not b["met"]:
+        return f"Bounty not hit: {b['words']} ({b['value']:g} of {b['bar']:g} {b['unit']})"
+    day = dt.date.fromisoformat(b["met_on"])
+    out = f"Bounty hit on {day:%a %d %b}: {b['words']}"
+    if b["bonus_pence"]:
+        out += f" = +{rates.gbp(b['bonus_pence'])}"
+    if b["treat"]:
+        out += f". To honour by hand: {b['treat']}"
+    return out
+
+
 def compose(data: dict, monday: dt.date) -> tuple[str, str, str]:
     """(subject, plain text, html) for one week."""
     week = next((w for w in data["weeks"] if w["monday"] == monday.isoformat()), None)
@@ -63,8 +79,12 @@ def compose(data: dict, monday: dt.date) -> tuple[str, str, str]:
         lines.append("(no activities)")
     if week.get("steps_days"):
         lines.append(f"Steps: {week['steps']:,} over {week['steps_days']} days = {week['steps_points']:.1f} pts")
+    bounty = bounty_line(week)
+    if bounty:
+        lines.append(bounty)
     lines += ["", f"Points {week['points']:.1f}" + (f" (paid for {week['points_paid_for']:.1f}, capped)" if week["capped"] else "")
-              + f"  ->  {rates.gbp(week['pence'])} at {rates.PENCE_PER_POINT}p a point",
+              + f"  ->  {rates.gbp(week['pence_points'])} at {rates.PENCE_PER_POINT}p a point"
+              + (f", + {rates.gbp(week['pence'] - week['pence_points'])} bounty = {rates.gbp(week['pence'])}" if week["pence"] != week["pence_points"] else ""),
               f"Owed in total (unpaid weeks): {rates.gbp(owed)}", ""]
     if pay:
         lines.append(f"Mark this week paid: {pay}")
@@ -89,6 +109,7 @@ def compose(data: dict, monday: dt.date) -> tuple[str, str, str]:
 <tr style="border-bottom:1px solid #ccc"><th align=left>when</th><th align=left>sport</th><th>dist</th><th>climb</th><th>time</th><th>pts</th><th align=left>name</th></tr>
 {''.join(rows) or '<tr><td colspan=7><i>no activities</i></td></tr>'}
 </table>
+{f'<p>🎯 {html.escape(bounty)}</p>' if bounty else ''}
 <p style="margin-top:16px"><b>Owed in total: {rates.gbp(owed)}</b> (every unpaid week)</p>
 <p>{f'<a href="{html.escape(pay)}">Mark this week paid</a> &nbsp;·&nbsp; ' if pay else ''}{f'<a href="{html.escape(page)}">his page</a>' if page else ''}</p>
 <p style="color:#888;font-size:12px">A highlighted row is one to look at before paying — strike it in data/overrides.json and the ledger re-scores.</p>
@@ -110,6 +131,8 @@ def compose_markdown(data: dict, monday: dt.date) -> tuple[str, str]:
             (f" ({week['n_flagged']} to check)" if week["n_flagged"] else "")
     lines = [f"<!-- argo-week: {monday.isoformat()} -->",
              f"**{len(acts)} activities · {week['points']:.1f} points · {rates.gbp(week['pence'])}**"
+             + (f" ({rates.gbp(week['pence_points'])} + {rates.gbp(week['pence'] - week['pence_points'])} bounty)"
+                if week["pence"] != week["pence_points"] else "")
              + (f" (capped from {week['points']:.1f} pts)" if week["capped"] else ""), ""]
     if acts:
         lines += ["| when | sport | dist | climb | time | pts | name | id |", "|---|---|---:|---:|---:|---:|---|---|"]
@@ -123,6 +146,9 @@ def compose_markdown(data: dict, monday: dt.date) -> tuple[str, str]:
     if week.get("steps_days"):
         lines += ["", f"👟 **Steps:** {week['steps']:,} over {week['steps_days']} day{'s' if week['steps_days'] != 1 else ''} "
                   f"= {week['steps_points']:.1f} pts ({rates.STEPS_PTS_PER_10K:g} pt per 10,000)"]
+    bounty = bounty_line(week)
+    if bounty:
+        lines += ["", f"🎯 **{bounty.split(':', 1)[0]}:**{bounty.split(':', 1)[1]}"]
     if week.get("milestones"):
         lines += ["", "🏆 **Easter eggs found this week:** " + ", ".join(m["title"] for m in week["milestones"])]
     lines += ["", f"**Owed in total: {rates.gbp(owed)}** (every unpaid week)", "",
@@ -159,7 +185,7 @@ def selftest() -> None:
                      {"id": 2, "name": "Before", "sport": "run", "type_key": "running",
                       "start_local": "2026-04-28 16:00:00", "distance_m": 5000, "ascent_m": 0,
                       "duration_s": 1500, "avg_hr": 150, "avg_speed_mps": 3.3}],
-                    {"weeks": {}}, {"exclude": {}}, {})     # steps={}: the fixture, never the live steps.json
+                    {"weeks": {}}, {"exclude": {}}, {}, {})     # {}: the fixture, never the live steps.json or bounties
     os.environ["PAY_URL"] = "https://example.test/pay"
     subj, text, body = compose(d, dt.date(2026, 9, 21))
     assert subj == "Argo: 21–27 Sep 2026 — £1.25 (1 to check)", subj
@@ -170,6 +196,16 @@ def selftest() -> None:
     assert "| `1` |" in md and "⚠ no heart rate" in md and "Easter eggs found this week:" in md and "Reply **paid**" in md
     _, text, _ = compose(d, dt.date(2026, 4, 27))        # history in the scheme's first week is not on its statement
     assert "Before" not in text, text
+    b = {"target": {"key": "k", "sports": "run", "metric": "miles", "counted": "week", "bar": 1, "words": ""},
+         "reward": {"key": "r", "type": "fixed", "value": 150, "cap_pence": None, "words": ""}, "status": "live"}
+    d = score.build([{"id": 1, "name": "Run", "sport": "run", "type_key": "running", "start_local": "2026-09-22 16:00:00",
+                      "distance_m": 1609.344, "ascent_m": 25.0, "duration_s": 600, "avg_hr": 150, "avg_speed_mps": 2.7}],
+                    {"weeks": {}}, {"exclude": {}}, {}, {"weeks": {"2026-09-21": b}})
+    subj, text, body = compose(d, dt.date(2026, 9, 21))
+    assert subj.endswith("£2.75") and "Bounty hit on Tue 22 Sep: Run 1 mile this week = +£1.50" in text, text
+    assert "£1.25 at 25p a point, + £1.50 bounty = £2.75" in text and "🎯 Bounty hit" in body
+    _, md = compose_markdown(d, dt.date(2026, 9, 21))
+    assert "(£1.25 + £1.50 bounty)" in md and "🎯 **Bounty hit on Tue 22 Sep:** Run 1 mile" in md, md
     print("statement: selftest OK")
 
 

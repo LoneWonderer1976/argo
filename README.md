@@ -69,7 +69,40 @@ A change re-scores every week, past and present (points are never stored), and i
 `pence_per_point` · `week_cap_points` · `scheme_start` · `eggs_start` · `steps_start` ·
 `steps_pts_per_10k` · `steps_per_mile_deducted` · `run_per_mile` · `walk_per_mile` ·
 `cycle_per_mile` · `kayak_per_mile` · `swim_per_100m` · `run_ascent_per_100m` ·
-`walk_ascent_per_100m` · `cycle_ascent_per_100m` · `min_distance_m`
+`walk_ascent_per_100m` · `cycle_ascent_per_100m` · `min_distance_m` · `bounty_outing_min_miles` ·
+`bounty_outing_min_minutes` · `bounty_cap_pence`
+
+## The weekly bounty
+
+One mission a week on top of his usual pocket money: a target (*Ride 10 miles this week*), one
+bar, one reward (a fixed bonus, a multiplier on that sport's money or on the whole week, or a
+real-world treat you hand over yourself).
+
+- **Sunday night**, after the statement, a second issue opens with **next week's bounty, drawn
+  from your menu**. Thomas cannot see it yet.
+- **Reply** `approve` and it goes on his page as a wanted poster with a progress bar. `veto` means
+  no bounty that week. `reroll` draws another. `bar 8`, `reward £3`, `reward x2`,
+  `reward week x1.5` and `reward treat <what it is>` change it, and `target <key>` picks another
+  line of the menu. You can put several on separate lines. If you never approve, it lapses with
+  the week.
+- **Once he can see it**, it can only get easier (a lower bar) or bigger (more of the same reward).
+  It can never be withdrawn or made harder.
+- When he hits it he gets a fanfare and the money joins that week's statement. A miss just goes
+  away: he never sees a *failed*.
+- **The menu is yours**, in two files that open in Excel:
+  - [`data/bounty_targets.csv`](data/bounty_targets.csv) holds what a bounty asks. Each line has
+    `on`, a `weight`, `sports`, a `metric`, `counted` (`week` or `one` outing), the `min`–`max`
+    range its bar is drawn from in `step`s, and the `words` he reads, where `{bar}` is the number.
+  - [`data/bounty_rewards.csv`](data/bounty_rewards.csv) holds what it pays. Money is in pounds.
+  - The metrics are `miles`, `climb_m`, `hours`, `outings`, `days`, `sports`, `steps` and
+    `steps_days`.
+  - Sports are `run`, `walk`, `cycle`, `swim`, `kayak`, `foot` (walk or run) and `any`.
+  - The reward types are `fixed`, `target_x` (multiplies the bounty's sports' money that week),
+    `week_x` (multiplies the whole week) and `real` (a treat, in `words`).
+  - Cycling carries most of the weight, since he can get out on his bike on his own.
+- **The form**, Actions → *bounty* → *Run workflow*, takes the same lines as a reply.
+  `python -m argo.bounty` on the PC shows this week's and next week's bounties and the menu, with
+  how often each line's lowest bar would have been hit.
 
 ## On the PC
 
@@ -80,6 +113,8 @@ python -m argo.sync --all       # his whole history, and any track a past run mi
 python -m argo.score --print    # the ledger as a table (and rebuilds docs/data.json)
 python -m argo.statement --print
 python -m argo.pay              # dry run; --apply to write
+python -m argo.bounty           # this week's and next week's bounty, and the menu
+python -m argo.bounty --do "approve" --apply    # the same lines as a reply on the bounty issue
 python -m argo.demo             # a made-up data.json to look at the page before the first sync
 ```
 

@@ -39,6 +39,7 @@
     $("total-gbp").textContent = gbp(t.pence);
     const b = new Date(DATA.built_at);
     $("updated").textContent = "updated " + b.toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+    renderBounty();
     renderTrophies();
     renderWeeks();
     renderSteps();
@@ -46,6 +47,52 @@
     renderActivities();     // and the Totals table, which follows the same filter
     renderRates();
     celebrate();
+  }
+
+  /* --- the bounty (Ben, 08/10/2026): this week's, or next week's once Dad has said yes to it.
+     data.json carries a LIVE bounty only -- a proposal never leaves the server. A missed one just
+     goes away on Monday: no "failed", nothing to feel bad about. --- */
+  const BOUNTY_KEY = "argo.bounty.seen";
+  const bnum = (b, v) => b.metric === "steps" ? Math.round(v).toLocaleString() : String(Math.round(v * 10) / 10);
+  function timeLeft(monday) {
+    const end = new Date(monday + "T00:00:00");
+    end.setDate(end.getDate() + 7);
+    const days = Math.ceil((end - new Date()) / 86400000);
+    return days <= 1 ? "last day!" : `${days} days left`;
+  }
+  function renderBounty() {
+    const B = DATA.bounty || {};
+    const b = B.current || B.next;
+    $("bounty-section").hidden = !b;
+    if (!b) return;
+    const soon = !B.current;
+    const growing = b.reward_type === "target_x" || b.reward_type === "week_x";
+    const pct = Math.max(0, Math.min(100, 100 * b.value / b.bar));
+    let meta;
+    if (soon) meta = "Starts on Monday, and everything from Monday counts.";
+    else if (b.met) meta = `Claimed on ${when(b.met_on + " 00:00").split(",")[0]}! ` + (b.treat ? `Your reward: <b>${esc(b.treat)}</b>.`
+      : `<b>+${gbp(b.bonus_pence)}</b>${growing ? " so far, and it keeps growing until Sunday." : " on your pocket money."}`);
+    else meta = `${b.counted === "one" ? "Best so far: " : ""}<b>${bnum(b, b.value)}</b> of ${bnum(b, b.bar)} ${esc(b.unit)} · `
+      + `${bnum(b, Math.max(0, b.bar - b.value))} to go · ${timeLeft(b.monday)}`;
+    $("bounty").className = "bounty" + (b.met ? " met" : "");
+    $("bounty").innerHTML = `
+      <div class="b-kicker">🎯 ${soon ? "Next week's bounty" : "This week's bounty"}</div>
+      <div class="b-words">${esc(b.words)}</div>
+      <div class="b-reward">Reward: <b>${esc(b.reward)}</b>${growing && !soon && !b.met && b.worth_pence ? ` · worth ${gbp(b.worth_pence)} right now` : ""}</div>
+      ${soon ? "" : `<div class="b-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${b.bar}" aria-valuenow="${b.value}"><div style="width:${pct}%"></div></div>`}
+      <div class="b-meta">${meta}</div>
+      ${b.met ? `<div class="b-stamp">Claimed</div>` : ""}`;
+  }
+  // a bounty hit this week or last that this phone has not cheered yet (localStorage, like the eggs)
+  function bountyCheers() {
+    let done;
+    try { done = new Set(JSON.parse(localStorage.getItem(BOUNTY_KEY) || "[]")); } catch (e) { done = new Set(); }
+    return DATA.weeks.slice(0, 2).map((w) => w.bounty).filter((b) => b && b.met && !done.has(b.monday)).map((b) => ({
+      key: "bounty:" + b.monday, title: b.words, date: b.met_on, kicker: "Bounty claimed!", burst: "🎯", dateWord: "Claimed ",
+      message: b.treat ? `Your reward: ${b.treat}.` : `+${gbp(b.bonus_pence)} on your pocket money` + (b.reward_type === "fixed" ? "."
+        : `, and it keeps growing until Sunday: ${b.reward.charAt(0).toLowerCase()}${b.reward.slice(1)}.`),
+      seen: () => { done.add(b.monday); try { localStorage.setItem(BOUNTY_KEY, JSON.stringify([...done])); } catch (e) { /* private mode */ } },
+    }));
   }
 
   /* --- the Easter eggs. data.json carries only the ones already won; the rest are a number. ---
@@ -73,12 +120,11 @@
   function celebrate() {
     const m = DATA.milestones || { won: [] };
     const done = seen();
-    const fresh = m.won.filter((w) => !done.has(w.key)).sort((a, b) => a.date < b.date ? -1 : 1);
-    if (!fresh.length) return;
+    let fresh = m.won.filter((w) => !done.has(w.key)).sort((a, b) => a.date < b.date ? -1 : 1);
     // first load on a new phone with a long history: don't replay months of eggs one by one
-    if (done.size === 0 && fresh.length > 5) { markSeen(new Set(m.won.map((w) => w.key))); return; }
-    eggQueue = fresh;
-    nextEgg();
+    if (done.size === 0 && fresh.length > 5) { markSeen(new Set(m.won.map((w) => w.key))); fresh = []; }
+    eggQueue = [...bountyCheers(), ...fresh];
+    if (eggQueue.length) nextEgg();
   }
   function nextEgg() {
     const w = eggQueue.shift();
@@ -87,12 +133,15 @@
   }
   function showEgg(w, isNew) {
     if (!w) return;
+    $("egg-kicker").textContent = w.kicker || "You found an Easter egg!";
+    $("egg-burst").textContent = w.burst || "🏆";
     $("egg-title").textContent = w.title;
     $("egg-message").textContent = w.message;
-    $("egg-date").textContent = (isNew ? "Earned " : "Found ") + w.date.slice(8, 10) + "/" + w.date.slice(5, 7) + "/" + w.date.slice(0, 4);
+    $("egg-date").textContent = (w.dateWord || (isNew ? "Earned " : "Found ")) + w.date.slice(8, 10) + "/" + w.date.slice(5, 7) + "/" + w.date.slice(0, 4);
     $("egg-next").textContent = eggQueue.length ? "Next one! →" : "Brilliant!";
     $("egg").hidden = false;
-    if (isNew) { const s = seen(); s.add(w.key); markSeen(s); }
+    if (isNew && w.seen) w.seen();
+    else if (isNew) { const s = seen(); s.add(w.key); markSeen(s); }
   }
   $("egg-next").addEventListener("click", nextEgg);
 
@@ -102,7 +151,7 @@
     box.innerHTML = weeks.map((w) => `
       <div class="week ${w.status}">
         <span class="pill ${w.status}">${w.status}</span>
-        <span class="label">${esc(w.label)}<div class="n">${w.n_activities} activit${w.n_activities === 1 ? "y" : "ies"}${w.steps ? " · " + w.steps.toLocaleString() + " steps" : ""} · ${w.points.toFixed(1)} pts${w.capped ? " · capped" : ""}${w.paid_on ? " · paid " + w.paid_on : ""}</div></span>
+        <span class="label">${esc(w.label)}<div class="n">${w.n_activities} activit${w.n_activities === 1 ? "y" : "ies"}${w.steps ? " · " + w.steps.toLocaleString() + " steps" : ""} · ${w.points.toFixed(1)} pts${w.capped ? " · capped" : ""}${w.bounty && w.bounty.met ? " · 🎯 bounty" + (w.bounty.bonus_pence ? " +" + gbp(w.bounty.bonus_pence) : "") : ""}${w.paid_on ? " · paid " + w.paid_on : ""}</div></span>
         <span class="gbp">${gbp(w.pence)}</span>
       </div>`).join("");
     const chartWeeks = DATA.weeks.slice(0, 10).reverse();

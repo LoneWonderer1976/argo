@@ -8,6 +8,9 @@
     data/settings.json          Ben's overrides of rates.py's constants  {"steps_pts_per_10k": 2.0, ...}
     data/ledger.json            the weeks Ben has marked PAID  {"weeks": {"2026-09-21": {"paid_on": ..}}}
     data/overrides.json         Ben's strikes and relabels  {"exclude": {"<id>": "reason"}, "sport": {"<id>": "kayak"}}
+    data/bounties.json          each week's bounty and what Dad said  {"weeks": {"2026-10-12": {"status": "live", ..}}}
+    data/bounty_targets.csv     Ben's bounty MENU: what a bounty asks, each with its range and weight (opens in Excel)
+    data/bounty_rewards.csv     ... and what it pays
 
 Plain JSON in git: every change is a commit, every mistake has an undo, and GitHub Actions can
 read and write it with nothing installed. An activity file is written once and never edited
@@ -25,6 +28,9 @@ STEPS = DATA / "steps.json"
 SETTINGS = DATA / "settings.json"
 LEDGER = DATA / "ledger.json"
 OVERRIDES = DATA / "overrides.json"
+BOUNTIES = DATA / "bounties.json"
+BOUNTY_TARGETS = DATA / "bounty_targets.csv"
+BOUNTY_REWARDS = DATA / "bounty_rewards.csv"
 DOCS = ROOT / "docs"
 
 
@@ -95,3 +101,13 @@ def overrides() -> dict:
 
 def write_overrides(obj: dict) -> None:
     _write(OVERRIDES, obj)
+
+
+def bounties() -> dict:
+    b = _read(BOUNTIES, {})
+    b.setdefault("weeks", {})
+    return b
+
+
+def write_bounties(obj: dict) -> None:
+    _write(BOUNTIES, obj)

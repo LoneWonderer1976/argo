@@ -51,3 +51,31 @@ jobs:
           PAGE_URL: "${{ vars.PAGE_URL }}"
           PAY_URL: "${{ github.server_url }}/${{ github.repository }}/issues"
         run: python -m argo.statement ${{ inputs.week && format('--week {0}', inputs.week) || '' }}
+
+  # Then next week's bounty, drawn from Ben's menu and opened as its own issue (ARGO_BRIEF
+  # "Bounties"). Nothing reaches Thomas's page until Ben replies "approve" (paid.yml's bounty job).
+  # A week that already has one is left alone, so a re-run of the statement draws nothing.
+  bounty:
+    needs: statement
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.ref_name }}" }      # the branch's head: the statement job has pushed since
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: propose next week's bounty
+        env:
+          GH_TOKEN: "${{ github.token }}"
+        run: |
+          TITLE=$(python -m argo.bounty --propose --issue-file bounty.md --apply)
+          if [ -z "$TITLE" ]; then exit 0; fi
+          git config user.name "argo"
+          git config user.email "argo@users.noreply.github.com"
+          git add data
+          git commit -qm "bounty proposed: $TITLE"
+          git push
+          for n in $(gh issue list --state open --search 'in:title "Argo bounty"' --json number --jq '.[].number'); do
+            gh issue close "$n" --comment "Lapsed: next week's bounty has just been proposed." || true
+          done
+          gh issue create --title "$TITLE" --body-file bounty.md

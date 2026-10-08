@@ -47,6 +47,13 @@ ASCENT_PTS_PER_M = {"cycle": 1.0 / 100, "walk": 1.0 / 50, "run": 1.0 / 25}
 
 MILES_PER_METRE = 1.0 / 1609.344
 
+# --- the weekly bounty (Ben, 08/10/2026; ARGO_BRIEF "Bounties"). What a bounty asks and what it
+# pays is Ben's MENU, data/bounty_targets.csv and data/bounty_rewards.csv; these are its rules. -----
+BOUNTY_OUTING_MIN_MILES = 1.0           # an outing counts toward an outings/days bar from a mile ...
+BOUNTY_OUTING_MIN_MINUTES = 20.0        # ... or 20 minutes: MIN_DISTANCE_M's 100 m would make two strolls to the gate two outings
+BOUNTY_STEPS_DAY = 10000                # a "10,000 steps on N days" bar counts a day from here
+BOUNTY_CAP_PENCE = 500                  # the most a multiplier Dad types by hand adds, unless he says "cap"
+
 # --- plausibility (flags, never refusals; Ben adjudicates on the statement) -------------------
 # A "bike ride" at 40 mph is the car; a "run" at 4-minute miles is the bike; a walk with no
 # movement and no heart rate is a watch left recording. These are generous ceilings, and a flag
@@ -128,6 +135,9 @@ SETTINGS = {
     "walk_ascent_per_100m":    ("ASCENT_PTS_PER_M.walk", "per100", "points per 100 m climbed walking"),
     "cycle_ascent_per_100m":   ("ASCENT_PTS_PER_M.cycle", "per100", "points per 100 m climbed cycling"),
     "min_distance_m":          ("MIN_DISTANCE_M", float, "an activity shorter than this earns nothing"),
+    "bounty_outing_min_miles": ("BOUNTY_OUTING_MIN_MILES", float, "a bounty counts an outing from this many miles ..."),
+    "bounty_outing_min_minutes": ("BOUNTY_OUTING_MIN_MINUTES", float, "... or this many minutes"),
+    "bounty_cap_pence":        ("BOUNTY_CAP_PENCE", int, "most a hand-typed bounty multiplier adds (pence)"),
 }
 
 
