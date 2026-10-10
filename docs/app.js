@@ -154,7 +154,7 @@
     const fresh = new Set(recBreaks().filter((b) => b.date >= daysAgo(6)).map((b) => `${b.sport}:${b.metric}:${b.date}:${b.id}`));
     $("best-tables").innerHTML = Object.entries(T[bestSport]).map(([metric, items]) => `
       <div class="best">
-        <div class="best-head">${BEST_LABEL[metric]}</div>
+        <div class="best-head">${BEST_LABEL[metric] || `Fastest, ${metric.slice(6)}+ miles`}</div>
         ${items.map((it, i) => `
           <div class="best-row${it.id ? " tap" : ""}" ${it.id ? `data-id="${it.id}"` : ""}>
             <span class="best-rank">${["🥇", "🥈", "🥉"][i] || i + 1}</span>

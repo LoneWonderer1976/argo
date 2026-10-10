@@ -16,8 +16,11 @@ Derived on every run like everything else: a strike, a relabel or a new sync re-
   not a record. A first ever (no earlier one to beat) is not a break, it is the Easter eggs' job.
 - **Breaks are cheered from RECORDS_START** (a setting). The walk through history before it only
   sets the bar, so the first sync after the build does not fire a backlog of banners.
-- **Fastest is in the tables but never cheered on a bike** -- the bounty's reasoning (ARGO_BRIEF,
-  08/10): a speed prize rewards rushing on the roads.
+- **A ride's fastest is by set distance** (Ben, 10/10: "give fastest ride banner too for set
+  distances"): the fastest ride of 3+, 5+, 10+ and 15+ miles, each its own record and banner, so a
+  quick spin to the shops cannot hold the 10-mile record. Garmin's summary has only the whole
+  ride's average speed and the stored tracks carry no clock, so it is the whole ride's average,
+  never a fastest 5 miles cut out of a longer one.
 """
 import argparse
 import datetime as dt
@@ -27,11 +30,17 @@ from . import rates
 MI = 1609.344
 NOUN = {"run": "run", "walk": "walk", "cycle": "ride", "swim": "swim", "kayak": "paddle"}
 METRICS = ("distance", "climb", "time", "speed")
+CYCLE_SPEED_MILES = (3, 5, 10, 15)       # a ride's fastest is a record per set distance (Ben, 10/10)
 CLIMB_SPORTS = ("run", "walk", "cycle")
 # the shortest outing that may hold a speed record: a 200 m dash is not his fastest run
 SPEED_MIN_M = {"run": MI, "walk": MI, "cycle": 3 * MI, "swim": 100.0, "kayak": MI}
-NO_CHEER = {("cycle", "speed")}
 TOP_N = 5
+
+
+def metrics_for(sport: str) -> tuple[str, ...]:
+    if sport == "cycle":
+        return METRICS[:-1] + tuple(f"speed_{n}" for n in CYCLE_SPEED_MILES)
+    return METRICS
 
 
 def metric_value(a: dict, metric: str) -> float | None:
@@ -46,6 +55,9 @@ def metric_value(a: dict, metric: str) -> float | None:
     if metric == "speed":
         v = a.get("avg_speed_mps")
         return v if v and (a.get("distance_m") or 0) >= SPEED_MIN_M[sport] else None
+    if metric.startswith("speed_"):
+        v = a.get("avg_speed_mps")
+        return v if v and (a.get("distance_m") or 0) >= int(metric[6:]) * MI - 0.05 * MI else None
     raise ValueError(metric)
 
 
@@ -75,6 +87,8 @@ def counts(a: dict) -> bool:
 
 def title(sport: str, metric: str) -> str:
     n = NOUN.get(sport, sport)
+    if metric.startswith("speed_"):
+        return f"Fastest {n} of {metric[6:]}+ miles"
     return {"distance": f"Longest {n}", "climb": f"Most climbing on a {n}", "time": f"Longest time on a {n}",
             "speed": f"Fastest {n}", "steps": "Most steps in a day"}[metric]
 
@@ -96,13 +110,13 @@ def build(rows: list[dict], days: list[dict], start: dt.date | None = None) -> d
     def walk(key: tuple, item: dict, v: float, sport: str, metric: str) -> None:
         held = best.get(key)
         if held is None or shown(metric, sport, v) > shown(metric, sport, held["value"]):
-            if held is not None and dt.date.fromisoformat(item["date"]) >= start and key not in NO_CHEER:
+            if held is not None and dt.date.fromisoformat(item["date"]) >= start:
                 breaks.append({"key": f"{sport}:{metric}:{item['date']}:{item['id']}", "sport": sport, "metric": metric,
                                "title": title(sport, metric), **item, "prev_value": held["value"], "prev_date": held["date"]})
             best[key] = item
 
     for a in acts:
-        for metric in METRICS:
+        for metric in metrics_for(a["sport"]):
             v = metric_value(a, metric)
             if v is None:
                 continue
@@ -156,13 +170,15 @@ def selftest() -> None:
     days = [{"date": "2026-10-09", "steps": 9000}, {"date": "2026-10-12", "steps": 12000}, {"date": "2026-10-13", "steps": 12000}]
     r = build(rows, days, dt.date(2026, 10, 10))
     got = {(b["sport"], b["metric"], b["id"]) for b in r["breaks"]}
-    assert got == {("cycle", "climb", 2), ("cycle", "time", 2), ("cycle", "distance", 7), ("steps", "steps", None)}, got
+    assert got == {("cycle", "climb", 2), ("cycle", "time", 2), ("cycle", "distance", 7), ("steps", "steps", None),
+                   ("cycle", "speed_3", 2), ("cycle", "speed_5", 2), ("cycle", "speed_3", 7), ("cycle", "speed_5", 7)}, got
     b = next(b for b in r["breaks"] if b["metric"] == "distance")
     assert b["prev_date"] == "2026-10-01" and b["title"] == "Longest ride", b
     t = r["tables"]["cycle"]
     assert [i["id"] for i in t["distance"]] == [7, 8, 1, 2], t["distance"]      # 1 and 2 tie at 8.0: the earlier ranks first
     assert 3 not in [i["id"] for m in t.values() for i in m] and 4 not in [i["id"] for m in t.values() for i in m]
-    assert t["speed"][0]["id"] == 7 and t["distance"][2]["history"]
+    assert "speed" not in t and t["speed_3"][0]["id"] == 7 and [i["id"] for i in t["speed_10"]] == [7] and "speed_15" not in t
+    assert title("cycle", "speed_10") == "Fastest ride of 10+ miles" and t["distance"][2]["history"]
     assert [i["id"] for i in r["tables"]["walk"]["speed"]] == [5] and r["tables"]["steps"]["steps"][0]["date"] == "2026-10-12"
     assert say("run", "speed", MI / 540) == "9:00 /mi" and say("cycle", "distance", 10 * MI) == "10.0 mi" and say("walk", "time", 3900) == "1h 05m"
     print("records: selftest OK")

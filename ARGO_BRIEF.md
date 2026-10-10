@@ -356,9 +356,15 @@ Built the same day: `argo/records.py`, derived on every build like the rest.
   under the activities, a chip per sport plus steps, the top five at each record with 🥇🥈🥉 and
   a NEW tag for the week's breaks; a row opens the activity.
 - **The statement** carries a 🏅 line for the week's bests, with what each beat.
-- **My readings Ben may overrule:** a bike's fastest is in the tables but never gets a banner (the
-  bounty's reasoning: a speed prize rewards rushing on the roads); history counts toward the
-  tables; a day's steps can be cheered while the day is still counting (the fanfare shows the
+- **A ride's fastest is by set distance, banner and all** (Ben, the same day: *"give fastest ride
+  banner too for set distances"*, overruling my first reading, which kept a bike's speed off the
+  banners for the bounty's reason): the fastest ride of 3+, 5+, 10+ and 15+ miles
+  (`CYCLE_SPEED_MILES`), each its own record, a ride counting in every band it reaches (within
+  0.05 mile, so a ride the page prints as 10.0 mi is a 10-mile ride). It is the whole ride's
+  average: Garmin's summary has no splits and the stored tracks no clock, so a fastest 5 miles
+  cut from a longer ride would need the FIT files. Garmin's `averageSpeed` counts stops, so a
+  ride with a long break reads slow (his 10-mile best is 6.1 mph).
+- **My readings Ben may overrule:** history counts toward the tables; a day's steps can be cheered while the day is still counting (the fanfare shows the
   count at that moment).
 - **Found and fixed in passing:** the page re-reads data.json whenever it comes back into view,
   and each re-read while a fanfare was up rebuilt the queue, showed one and marked it seen, so a
