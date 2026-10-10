@@ -3,7 +3,8 @@
 Pocket money for getting out. Thomas's Garmin watch records the activity, Argo turns it into
 points at the rates in [`argo/rates.py`](argo/rates.py), the points into pence, and the week into
 a statement for Dad. His page shows what he has earned so far this week, what is owed, what has
-been paid — and the Easter eggs he has found (111 hidden milestones, each with its own message).
+been paid — the Easter eggs he has found (hidden milestones, each with its own message), and his
+personal bests: a banner when he breaks one, and his top five at everything, sport by sport.
 
 Nothing runs anywhere but GitHub: an Action syncs from Garmin every hour and publishes the page
 to GitHub Pages; another opens the Sunday statement as an issue (GitHub emails it to you); your

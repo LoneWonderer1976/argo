@@ -3,20 +3,20 @@
   --hero: #0f2a44; --hero-ink: #ffffff; --hero-muted: #9fb3c8; --accent: #f2b134;
   --paid: #2e8b57; --owed: #d9822b; --current: #3b82f6; --flag: #fff3cd;
   --empty: #9aa3ad; --run: #e4572e; --walk: #2e8b57; --cycle: #3b82f6; --swim: #0ea5b7; --kayak: #7c3aed; --other: #9aa3ad;
-  --poster: #f7ecd2; --poster-ink: #3b2f17; --poster-line: #c9a96a;
+  --poster: #f7ecd2; --poster-ink: #3b2f17; --poster-line: #c9a96a; --pb: #fff4d6;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0d1420; --card: #16202e; --ink: #e8edf3; --muted: #93a0b0; --line: #26313f;
     --hero: #0a1a2c; --flag: #4a3d12;
-    --poster: #2f2817; --poster-ink: #f3e6c8; --poster-line: #6b5a35;
+    --poster: #2f2817; --poster-ink: #f3e6c8; --poster-line: #6b5a35; --pb: #3a2f12;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0d1420; --card: #16202e; --ink: #e8edf3; --muted: #93a0b0; --line: #26313f;
   --hero: #0a1a2c; --flag: #4a3d12;
-  --poster: #2f2817; --poster-ink: #f3e6c8; --poster-line: #6b5a35;
+  --poster: #2f2817; --poster-ink: #f3e6c8; --poster-line: #6b5a35; --pb: #3a2f12;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink);
@@ -134,3 +134,24 @@ main { padding: 0 16px calc(24px + env(safe-area-inset-bottom)); max-width: 720p
 .egg-btn { margin-top: 18px; background: var(--accent); color: #14202e; border: 0; border-radius: 999px; padding: 12px 28px; font-size: 1rem; font-weight: 700; }
 @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* personal bests (Ben, 10/10/2026): the banner, and his top five at everything */
+.pb-banners { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.pb { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: center; background: var(--pb);
+  border: 2px solid var(--accent); border-radius: 14px; padding: 10px 12px; animation: pop .45s cubic-bezier(.2,1.4,.4,1); }
+.pb[data-id] { cursor: pointer; }
+.pb-medal { font-size: 2rem; text-align: center; }
+.pb-kicker { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.pb-title { font-weight: 800; font-size: 1.08rem; }
+.pb-was { color: var(--muted); font-size: .85rem; }
+.best-tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 8px; }
+.best { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; min-width: 0; }
+.best-head { font-weight: 700; font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+.best-row { display: grid; grid-template-columns: 26px auto 1fr; gap: 8px; align-items: baseline; padding: 5px 0; border-top: 1px solid var(--line); }
+.best-head + .best-row { border-top: 0; }
+.best-row.tap { cursor: pointer; }
+.best-rank { text-align: center; }
+.best-val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.best-when { color: var(--muted); font-size: .82rem; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.best-new { background: var(--accent); color: #14202e; font-size: .65rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; vertical-align: middle; }
+.chip.steps.on { background: var(--accent); color: #14202e; }

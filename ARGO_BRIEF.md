@@ -332,6 +332,38 @@ week, and a first in an empty one. *Two outings this week* would have been hit i
 - **Not built:** letting Tom choose one of three. The page cannot take a click, so his choice
   would have to come through Ben.
 
+## Personal bests: a banner when he breaks one, and the tables of his best (10/10/2026)
+
+Ben: *"can we modify Argo so that Tom gets a banner whenever he breaks a PB, longest cycle, most
+meters climbed etc etc and also give him tables of his best activities, walking, cycling etc"*.
+Built the same day: `argo/records.py`, derived on every build like the rest.
+
+- **What is a record:** for each sport, the longest (distance), the most climbing (run, walk and
+  ride; a swim or a paddle has none), the longest time and the fastest; and the most steps in a
+  day. Fastest needs a mile on foot or on the water, 3 miles on a bike, 100 m in the pool, so a
+  200 m dash is never his fastest run.
+- **The tables are his whole history**, before Argo included: a best is a best ever. Struck
+  activities never count, and neither does one over its sport's speed ceiling
+  (`MAX_SPEED_MPS`): that is the car, flagged or not (history carries no flags).
+- **A break must beat every earlier one at the precision the page prints** (0.1 mile, a metre,
+  a minute, a second of pace, 0.1 mph), so the page never says *10.0 mi, beating 10.0 mi*. A
+  first ever is not a break; that is the Easter eggs' job.
+- **Cheered from `RECORDS_START`** (10 October 2026, a setting, `records_start`). The walk
+  through history before it only sets the bar, so the first build fired no backlog of banners.
+- **The page:** a gold banner at the top for every record broken in the last 7 days (the newest
+  break of each record only), tap it for the activity; a fanfare once a phone through the egg
+  overlay (`argo.records.seen` in localStorage) for a break in the last 14 days; and **Your bests**
+  under the activities, a chip per sport plus steps, the top five at each record with 🥇🥈🥉 and
+  a NEW tag for the week's breaks; a row opens the activity.
+- **The statement** carries a 🏅 line for the week's bests, with what each beat.
+- **My readings Ben may overrule:** a bike's fastest is in the tables but never gets a banner (the
+  bounty's reasoning: a speed prize rewards rushing on the roads); history counts toward the
+  tables; a day's steps can be cheered while the day is still counting (the fanfare shows the
+  count at that moment).
+- **Found and fixed in passing:** the page re-reads data.json whenever it comes back into view,
+  and each re-read while a fanfare was up rebuilt the queue, showed one and marked it seen, so a
+  queue of eggs could lose all but the last. `celebrate()` now leaves an open fanfare alone.
+
 ## Not built, deliberately
 
 - **Screen time.** Ben: *"or possibly screentime or both"*. Points are the currency; a second

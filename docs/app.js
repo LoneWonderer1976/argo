@@ -39,12 +39,14 @@
     $("total-gbp").textContent = gbp(t.pence);
     const b = new Date(DATA.built_at);
     $("updated").textContent = "updated " + b.toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+    renderBanners();
     renderBounty();
     renderTrophies();
     renderWeeks();
     renderSteps();
     renderFilters();
     renderActivities();     // and the Totals table, which follows the same filter
+    renderBests();
     renderRates();
     celebrate();
   }
@@ -95,6 +97,81 @@
     }));
   }
 
+  /* --- personal bests (Ben, 10/10/2026): a banner for every record broken in the last week, a
+     fanfare once a phone (localStorage, like the eggs), and his top five at everything. The
+     numbers come from argo/records.py; this only prints them, in the same units. --- */
+  const REC_KEY = "argo.records.seen";
+  const MI = 1609.344;
+  const recSay = (sport, metric, v) => {
+    if (metric === "distance") return sport === "swim" ? Math.round(v) + " m" : (v / MI).toFixed(1) + " mi";
+    if (metric === "climb") return Math.round(v) + " m";
+    if (metric === "time") return dur(v);
+    if (metric === "steps") return Math.round(v).toLocaleString() + " steps";
+    if (sport === "run" || sport === "walk") return clock(MI / v) + " /mi";
+    if (sport === "swim") return clock(100 / v) + " /100 m";
+    return (v * 2.23694).toFixed(1) + " mph";
+  };
+  const shortDay = (iso) => when(iso + " 00:00").split(",")[0];
+  const recBreaks = () => ((DATA.records || {}).breaks || []);
+  function renderBanners() {
+    const since = daysAgo(6);
+    // the newest break of each record only: a ride that beats Tuesday's beats it for the banner too
+    const latest = {};
+    for (const b of recBreaks()) if (b.date >= since) latest[b.sport + ":" + b.metric] = b;
+    const list = Object.values(latest).sort((a, b) => (a.date < b.date ? 1 : -1));
+    $("pb-section").hidden = !list.length;
+    $("pb-banners").innerHTML = list.map((b) => `
+      <div class="pb" ${b.id ? `data-id="${b.id}"` : ""}>
+        <div class="pb-medal">🏅</div>
+        <div><div class="pb-kicker">New personal best · ${esc(shortDay(b.date))}</div>
+        <div class="pb-title">${esc(b.title)}: ${recSay(b.sport, b.metric, b.value)}</div>
+        <div class="pb-was">beating ${recSay(b.sport, b.metric, b.prev_value)} from ${dmy(b.prev_date)}</div></div>
+      </div>`).join("");
+  }
+  $("pb-banners").addEventListener("click", (e) => { const c = e.target.closest(".pb[data-id]"); if (c) openSheet(+c.dataset.id); });
+  // a fanfare once a phone for a record set in the last fortnight (localStorage, like the eggs)
+  function recordCheers() {
+    let done;
+    try { done = new Set(JSON.parse(localStorage.getItem(REC_KEY) || "[]")); } catch (e) { done = new Set(); }
+    return recBreaks().filter((b) => b.date >= daysAgo(13) && !done.has(b.key)).map((b) => ({
+      key: b.key, title: `${b.title}!`, date: b.date, kicker: "New personal best!", burst: "🏅", dateWord: "Set on ",
+      message: `${recSay(b.sport, b.metric, b.value)}: your best ever, beating ${recSay(b.sport, b.metric, b.prev_value)} from ${dmy(b.prev_date)}.`,
+      seen: () => { done.add(b.key); try { localStorage.setItem(REC_KEY, JSON.stringify([...done])); } catch (e) { /* private mode */ } },
+    }));
+  }
+
+  const BEST_KEY = "argo.bests.sport";
+  const BEST_LABEL = { distance: "Longest", climb: "Most climbing", time: "Longest time", speed: "Fastest", steps: "Most steps in a day" };
+  const BEST_ICON = { ...ICON, steps: "👟" };
+  let bestSport = (() => { try { return localStorage.getItem(BEST_KEY) || ""; } catch (e) { return ""; } })();
+  function renderBests() {
+    const T = (DATA.records || {}).tables || {};
+    const sports = [...DATA.scheme.sports, "steps"].filter((s) => T[s]);
+    $("best-section").hidden = !sports.length;
+    if (!sports.length) return;
+    if (!sports.includes(bestSport)) bestSport = sports.includes("cycle") ? "cycle" : sports[0];
+    $("best-sport").innerHTML = sports.map((s) => `<button type="button" class="chip ${s}${s === bestSport ? " on" : ""}" data-sport="${s}" aria-pressed="${s === bestSport}">${BEST_ICON[s]} ${s}</button>`).join("");
+    const fresh = new Set(recBreaks().filter((b) => b.date >= daysAgo(6)).map((b) => `${b.sport}:${b.metric}:${b.date}:${b.id}`));
+    $("best-tables").innerHTML = Object.entries(T[bestSport]).map(([metric, items]) => `
+      <div class="best">
+        <div class="best-head">${BEST_LABEL[metric]}</div>
+        ${items.map((it, i) => `
+          <div class="best-row${it.id ? " tap" : ""}" ${it.id ? `data-id="${it.id}"` : ""}>
+            <span class="best-rank">${["🥇", "🥈", "🥉"][i] || i + 1}</span>
+            <span class="best-val">${recSay(bestSport, metric, it.value)}${fresh.has(`${bestSport}:${metric}:${it.date}:${it.id}`) ? ` <span class="best-new">NEW</span>` : ""}</span>
+            <span class="best-when">${it.id ? esc(it.name) + " · " : ""}${dmy(it.date)}</span>
+          </div>`).join("")}
+      </div>`).join("");
+  }
+  $("best-sport").addEventListener("click", (e) => {
+    const b = e.target.closest(".chip");
+    if (!b) return;
+    bestSport = b.dataset.sport;
+    try { localStorage.setItem(BEST_KEY, bestSport); } catch (e2) { /* private mode */ }
+    renderBests();
+  });
+  $("best-tables").addEventListener("click", (e) => { const r = e.target.closest(".best-row[data-id]"); if (r) openSheet(+r.dataset.id); });
+
   /* --- the Easter eggs. data.json carries only the ones already won; the rest are a number. ---
      Which ones THIS phone has already celebrated lives in localStorage (a per-viewer convenience:
      if it is wiped he gets the fanfare again, which is hardly a punishment). */
@@ -118,12 +195,15 @@
 
   let eggQueue = [];
   function celebrate() {
+    // a reload while a fanfare is up (the page re-reads data.json whenever it comes back into view)
+    // must not rebuild the queue: each rebuild showed one and marked it seen, losing the rest
+    if (!$("egg").hidden) return;
     const m = DATA.milestones || { won: [] };
     const done = seen();
     let fresh = m.won.filter((w) => !done.has(w.key)).sort((a, b) => a.date < b.date ? -1 : 1);
     // first load on a new phone with a long history: don't replay months of eggs one by one
     if (done.size === 0 && fresh.length > 5) { markSeen(new Set(m.won.map((w) => w.key))); fresh = []; }
-    eggQueue = [...bountyCheers(), ...fresh];
+    eggQueue = [...recordCheers(), ...bountyCheers(), ...fresh];
     if (eggQueue.length) nextEgg();
   }
   function nextEgg() {

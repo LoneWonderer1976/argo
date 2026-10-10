@@ -151,6 +151,8 @@ def compose_markdown(data: dict, monday: dt.date) -> tuple[str, str]:
         lines += ["", f"🎯 **{bounty.split(':', 1)[0]}:**{bounty.split(':', 1)[1]}"]
     if week.get("milestones"):
         lines += ["", "🏆 **Easter eggs found this week:** " + ", ".join(m["title"] for m in week["milestones"])]
+    if week.get("records"):
+        lines += ["", "🏅 **Personal bests this week:** " + ", ".join(f"{r['title']} {r['now']} (was {r['was']})" for r in week["records"])]
     lines += ["", f"**Owed in total: {rates.gbp(owed)}** (every unpaid week)", "",
               "Reply **paid** to mark this week paid. Reply **strike `<id>` reason** to remove an activity from "
               "scoring first, or **sport `<id>` kayak** to relabel one the watch called *other*, then **paid**." + (f" [His page]({page})." if page else "")]

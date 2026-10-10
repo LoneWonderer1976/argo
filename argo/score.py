@@ -18,7 +18,7 @@ import json
 import shutil
 
 from . import bounty as bounties_
-from . import milestones, rates, store
+from . import milestones, rates, records, store
 from .weeks import last_week, this_week, today_uk, week_for, week_label, week_of
 
 
@@ -175,8 +175,15 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
     by_week_won: dict[str, list] = {}
     for m in won:
         by_week_won.setdefault(week_for(m["date"]).isoformat(), []).append(m)
+    # his personal bests (Ben, 10/10/2026): over his WHOLE history, struck and the car left out
+    recs_ = records.build(every, days)
+    by_week_rec: dict[str, list] = {}
+    for b in recs_["breaks"]:
+        by_week_rec.setdefault(week_for(b["date"]).isoformat(), []).append(b)
     for w in weeks:
         w["milestones"] = [{"key": m["key"], "title": m["title"]} for m in by_week_won.get(w["monday"], [])]
+        w["records"] = [{"title": b["title"], "now": records.say(b["sport"], b["metric"], b["value"]),
+                         "was": records.say(b["sport"], b["metric"], b["prev_value"])} for b in by_week_rec.get(w["monday"], [])]
     paid_pence = sum(w["pence"] for w in weeks if w["status"] == "paid")
     owed_pence = sum(w["pence"] for w in weeks if w["status"] == "owed")
     current = next((w for w in weeks if w["status"] == "current"), None)
@@ -208,6 +215,7 @@ def build(activities: list[dict] | None = None, ledger: dict | None = None,
                    "next": bounties_.view(nxt, upcoming, bounties_.progress(upcoming, [], [])) if upcoming else None},
         "activities": every,        # history included: the page shows it, nothing Python-side pays it
         "steps": list(reversed(days)),
+        "records": recs_,
         # the Easter eggs: only the WON ones leave the server; the rest are a number
         "milestones": {"won": list(reversed(won)), "hidden": len(milestones.MILESTONES) - len(won),
                        "total": len(milestones.MILESTONES)},

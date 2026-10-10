@@ -26,6 +26,7 @@ from pathlib import Path
 SCHEME_START = dt.date(2026, 5, 1)      # the day the ledger opens (Ben, 20/09: "backdate to 1st May"). Nothing before it earns.
 EGGS_START = dt.date(2026, 9, 21)       # the Easter eggs count from here (Ben, 20/09: the backdated months must not
                                         # burn through them on the first load). Set it to SCHEME_START to count history.
+RECORDS_START = dt.date(2026, 10, 10)    # personal bests are cheered from here (Ben, 10/10); history before it only sets the bar
 PENCE_PER_POINT = 25
 WEEK_CAP_POINTS = None                  # a ceiling on points paid per week; None = no cap (Ben, later)
 
@@ -124,6 +125,7 @@ SETTINGS = {
     "scheme_start":            ("SCHEME_START", "date", "the day the ledger opens"),
     "eggs_start":              ("EGGS_START", "date", "the day the Easter eggs start counting"),
     "steps_start":             ("STEPS_START", "date", "the day steps start counting"),
+    "records_start":           ("RECORDS_START", "date", "the day a broken personal best starts getting a banner"),
     "steps_pts_per_10k":       ("STEPS_PTS_PER_10K", float, "points per 10,000 steps"),
     "steps_per_mile_deducted": ("STEPS_PER_MILE_DEDUCTED", int, "steps not paid per recorded mile on foot (0 = gross)"),
     "run_per_mile":            ("DISTANCE_PER_MILE.run", float, "points per mile run"),
