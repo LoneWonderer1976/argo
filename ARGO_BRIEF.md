@@ -370,6 +370,19 @@ Built the same day: `argo/records.py`, derived on every build like the rest.
   and each re-read while a fanfare was up rebuilt the queue, showed one and marked it seen, so a
   queue of eggs could lose all but the last. `celebrate()` now leaves an open fanfare alone.
 
+## The hourly sync, from outside GitHub (10/10/2026)
+
+Measured: asked for hourly, GitHub's schedule ran the sync 4–6 times a day (gaps of 3 to 9
+hours, every run a success); GitHub runs a free account's scheduled jobs when it has room. Ben
+chose an outside clock: **cron-job.org calls the sync workflow's `workflow_dispatch` hourly**
+at :37, with a fine-grained token that can start Argo's workflows and do nothing else. The token
+lives at cron-job.org, never in the repo. GitHub's own `cron` stays as a backup; the shared
+`argo-data` concurrency group queues a clash rather than running two at once. Not more often
+than hourly: a run is ~11 s but bills a whole minute, plus the Pages deploy when data changed,
+against the private repo's 2,000 free minutes a month (every 30 minutes would sit at the limit),
+and Garmin's unofficial API is known to throttle accounts polled hard. The steps are in README,
+*A sync on the hour*.
+
 ## Not built, deliberately
 
 - **Screen time.** Ben: *"or possibly screentime or both"*. Points are the currency; a second

@@ -105,6 +105,34 @@ real-world treat you hand over yourself).
   `python -m argo.bounty` on the PC shows this week's and next week's bounties and the menu, with
   how often each line's lowest bar would have been hit.
 
+## A sync on the hour — cron-job.org
+
+GitHub's own schedule is best-effort: asked hourly, it ran 4–6 times a day in October 2026. So
+cron-job.org (free) starts the sync every hour instead, by calling GitHub's "run workflow" door.
+GitHub's schedule stays on as a backup; the two cannot collide (the sync waits its turn).
+
+1. **A token that can only start Argo's workflows.** GitHub → Settings → Developer settings →
+   Personal access tokens → **Fine-grained tokens** → Generate new token. Name *argo cron*,
+   expiry up to a year, **Repository access: Only select repositories → argo**,
+   **Permissions → Repositories → Actions: Read and write** (nothing else). Copy the token.
+2. **The cron job.** cron-job.org → Create cronjob:
+   - URL: `https://api.github.com/repos/LoneWonderer1976/argo/actions/workflows/sync.yml/dispatches`
+   - Schedule: every hour, at minute **37** (GitHub's own tries are at :07, so the two interleave)
+   - Advanced → Request method **POST**, headers:
+     - `Accept: application/vnd.github+json`
+     - `Authorization: Bearer <the token>`
+     - `X-GitHub-Api-Version: 2022-11-28`
+     - `Content-Type: application/json`
+   - Request body: `{"ref":"main"}`
+   - Save and press *Test run*: a good call answers **204**, and a *sync* run appears under the
+     repo's Actions tab with *workflow_dispatch* beside it.
+3. **When the token expires** the job starts failing (401) and cron-job.org emails you; make a new
+   token the same way and paste it over the old one. GitHub's own schedule keeps things moving
+   meanwhile.
+
+Hourly costs about 720 of the private repo's 2,000 free Actions minutes a month. Not more often:
+the minutes run short around every 30 minutes, and Garmin dislikes being polled hard.
+
 ## On the PC
 
 ```bash
