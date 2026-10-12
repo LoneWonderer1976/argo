@@ -1,7 +1,7 @@
 {
  "weeks": {
   "2026-10-19": {
-   "approved_on": null,
+   "approved_on": "2026-10-12",
    "by": "draw",
    "proposed_on": "2026-10-12",
    "reward": {
@@ -12,7 +12,7 @@
     "words": ""
    },
    "rolls": 0,
-   "status": "proposed",
+   "status": "live",
    "target": {
     "bar": 13,
     "counted": "week",
