@@ -1,0 +1,31 @@
+{
+ "weeks": {
+  "2026-10-19": {
+   "approved_on": null,
+   "by": "draw",
+   "proposed_on": "2026-10-12",
+   "reward": {
+    "cap_pence": null,
+    "key": "cash_bonus",
+    "type": "fixed",
+    "value": 300,
+    "words": ""
+   },
+   "rolls": 0,
+   "status": "proposed",
+   "target": {
+    "bar": 13,
+    "counted": "week",
+    "key": "cycle_miles",
+    "metric": "miles",
+    "range": [
+     8,
+     15
+    ],
+    "sports": "cycle",
+    "words": "Ride {bar} miles this week, as many rides as you like"
+   },
+   "vetoed_on": null
+  }
+ }
+}
