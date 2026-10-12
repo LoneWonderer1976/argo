@@ -20,9 +20,9 @@
     <h1>⛵ Argo</h1>
     <span id="updated" class="muted"></span>
   </div>
-  <div class="hero-main">
+  <div class="hero-main tap" id="hero-week" role="button" tabindex="0" aria-label="how this week was earned">
     <div class="big" id="week-gbp">£0.00</div>
-    <div class="big-label">this week so far</div>
+    <div class="big-label">this week so far <span aria-hidden="true">›</span></div>
   </div>
   <div class="hero-row">
     <div><div class="stat" id="owed-gbp">£0.00</div><div class="stat-label">owed</div></div>
@@ -104,6 +104,16 @@
     <div id="egg-message" class="egg-message"></div>
     <div id="egg-date" class="muted small"></div>
     <button id="egg-next" class="egg-btn">Brilliant!</button>
+  </div>
+</div>
+
+<!-- before #sheet, so an activity opened from a week stacks on top of it -->
+<div id="week-sheet" class="sheet" hidden>
+  <div class="sheet-inner">
+    <button class="close" id="week-close" aria-label="close">✕</button>
+    <div class="wk-top"><div id="week-title" class="sheet-title"></div><div id="week-total" class="wk-total"></div></div>
+    <div id="week-sub" class="muted"></div>
+    <div id="week-body"></div>
   </div>
 </div>
 

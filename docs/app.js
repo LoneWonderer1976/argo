@@ -23,7 +23,7 @@
     return (v * 2.23694).toFixed(1) + " mph";
   };
 
-  let DATA = null, map = null, layer = null, chart = null;
+  let DATA = null, map = null, layer = null, chart = null, weekOpen = null;
 
   async function load() {
     const r = await fetch("data.json?" + Date.now(), { cache: "no-store" });
@@ -48,6 +48,7 @@
     renderActivities();     // and the Totals table, which follows the same filter
     renderBests();
     renderRates();
+    if (weekOpen) openWeek(weekOpen);   // an open week follows the hourly sync like the rest
     celebrate();
   }
 
@@ -229,10 +230,11 @@
     const weeks = DATA.weeks.slice(0, 12);
     const box = $("weeks");
     box.innerHTML = weeks.map((w) => `
-      <div class="week ${w.status}">
+      <div class="week ${w.status} tap" data-monday="${w.monday}" role="button" tabindex="0">
         <span class="pill ${w.status}">${w.status}</span>
         <span class="label">${esc(w.label)}<div class="n">${w.n_activities} activit${w.n_activities === 1 ? "y" : "ies"}${w.steps ? " · " + w.steps.toLocaleString() + " steps" : ""} · ${w.points.toFixed(1)} pts${w.capped ? " · capped" : ""}${w.bounty && w.bounty.met ? " · 🎯 bounty" + (w.bounty.bonus_pence ? " +" + gbp(w.bounty.bonus_pence) : "") : ""}${w.paid_on ? " · paid " + w.paid_on : ""}</div></span>
         <span class="gbp">${gbp(w.pence)}</span>
+        <span class="chev" aria-hidden="true">›</span>
       </div>`).join("");
     const chartWeeks = DATA.weeks.slice(0, 10).reverse();
     const css = getComputedStyle(document.documentElement);
@@ -246,6 +248,8 @@
           datasets: [{ data: chartWeeks.map((w) => w.pence / 100), backgroundColor: chartWeeks.map((w) => col(w.status)), borderRadius: 6 }],
         },
         options: {
+          onClick: (e, els) => { if (els.length) openWeek(chartWeeks[els[0].index].monday); },
+          onHover: (e, els) => { e.native.target.style.cursor = els.length ? "pointer" : "default"; },
           plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => "£" + c.parsed.y.toFixed(2) } } },
           scales: { x: { grid: { display: false }, ticks: { color: col("muted") } }, y: { beginAtZero: true, ticks: { color: col("muted"), callback: (v) => "£" + v } } },
           animation: false,
@@ -253,6 +257,84 @@
       });
     }
   }
+
+  /* --- a week, opened (Thomas, 12/10/2026: "click on a week's earnings and see how they were
+     earnt"). Every line is derived here from the same data.json the rest of the page draws -- the
+     week's activities, its days of steps, its bounty -- and the lines are reconciled to the week's
+     own figure, which is what Dad pays: the money is rounded once, on the week's total
+     (argo/score.py), so any pennies the lines' own rounding leaves over are shown as a line. --- */
+  const half = (x) => Math.floor(x + 0.5);       // argo.rates.pence: round half up
+  const nPts = (n) => `${+n.toFixed(2)} pt${n === 1 ? "" : "s"}`;
+  const VERB = { run: "run", walk: "walked", cycle: "ridden", kayak: "paddled" };
+  function howEarned(a) {
+    const s = DATA.scheme;
+    if (a.excluded) return [`Struck by Dad: ${esc(a.excluded)}`];
+    if (!s.sports.includes(a.sport)) return ["Not a sport that pays. Dad can say what it was."];
+    if (!a.points) return ["Too short to earn anything"];
+    const out = [a.sport === "swim"
+      ? `${Math.round(a.distance_m).toLocaleString()} m swum × ${nPts(s.swim_per_100m)} per 100 m = ${a.points_distance.toFixed(1)} pts`
+      : `${(a.distance_m / MI).toFixed(2)} mi ${VERB[a.sport]} × ${nPts(s.distance_per_mile[a.sport])} a mile = ${a.points_distance.toFixed(1)} pts`];
+    if (a.points_ascent) out.push(`${Math.round(a.ascent_m)} m climbed × ${nPts(s.ascent_per_m[a.sport] * 100)} per 100 m = ${a.points_ascent.toFixed(1)} pts`);
+    return out;
+  }
+  const WEEK_SAYS = { current: "Still earning: the week ends on Sunday", owed: "Finished, waiting for Dad to pay", empty: "Nothing earned this week" };
+  function openWeek(monday) {
+    const w = DATA.weeks.find((x) => x.monday === monday);
+    if (!w) { closeWeek(); return; }
+    weekOpen = monday;
+    const s = DATA.scheme, pp = s.pence_per_point;
+    const acts = w.activities.map((id) => DATA.activities.find((a) => a.id === id)).filter(Boolean)
+      .sort((a, b) => (a.start_local < b.start_local ? -1 : 1));
+    const days = (DATA.steps || []).filter((d) => d.week === monday).sort((a, b) => (a.date < b.date ? -1 : 1));
+    const dayP = (d) => half(d.points * pp);
+    const stepsP = days.reduce((t, d) => t + dayP(d), 0);
+    const whole = w.capped ? half(w.points * pp) : w.pence_points;    // every point, priced once
+    const rounding = whole - acts.reduce((t, a) => t + a.pence_share, 0) - stepsP;
+    const cap = w.pence_points - whole, bonus = w.pence - w.pence_points;
+    $("week-title").textContent = w.label;
+    $("week-total").textContent = gbp(w.pence);
+    $("week-sub").innerHTML = `<span class="pill ${w.status}">${w.status}</span> `
+      + esc(w.status === "paid" ? `Paid by Dad${w.paid_on ? " on " + dmy(w.paid_on) : ""}` : WEEK_SAYS[w.status] || "");
+    const parts = [];
+    if (acts.length) parts.push(`<div class="wk-head">Activities</div>` + acts.map((a) => `
+      <div class="wk-act${a.excluded ? " struck" : ""}" data-id="${a.id}">
+        <div class="icon ${a.sport}">${ICON[a.sport] || ICON.other}</div>
+        <div><div class="name">${esc(a.name || a.sport)}</div><div class="wk-how">${when(a.start_local)}</div>
+          ${howEarned(a).map((h) => `<div class="wk-how">${h}</div>`).join("")}
+          ${a.flags.length && !a.excluded && s.sports.includes(a.sport) ? `<div class="wk-how warn">⚠ ${esc(a.flags.join("; "))}</div>` : ""}</div>
+        <div class="wk-gbp">${gbp(a.pence_share)}</div>
+      </div>`).join(""));
+    if (days.length) parts.push(`<div class="wk-head">👟 Steps <span>${+(pp * s.steps_pts_per_10k).toFixed(2)}p per 10,000</span></div>`
+      + days.map((d) => `
+      <div class="wk-day"><span>${shortDay(d.date)}</span>
+        <span>${d.steps.toLocaleString()}${d.deducted ? ` <small class="muted">less ${d.deducted.toLocaleString()} on foot</small>` : ""}</span>
+        <span class="muted">${d.points.toFixed(1)} pts</span><span class="wk-gbp">${gbp(dayP(d))}</span></div>`).join("")
+      + `<div class="wk-line"><span>${w.steps.toLocaleString()} steps over ${days.length} day${days.length === 1 ? "" : "s"}</span><span class="wk-gbp">${gbp(stepsP)}</span></div>`);
+    const b = w.bounty;
+    if (b && b.met) parts.push(`<div class="wk-head">🎯 Bounty</div><div class="wk-line"><span>${esc(b.words)}`
+      + `${b.treat ? `<br><small class="muted">Your reward: ${esc(b.treat)}</small>` : ""}</span><span class="wk-gbp">${bonus ? "+" + gbp(bonus) : ""}</span></div>`);
+    if (!parts.length) parts.push(`<p class="muted">${w.status === "current" ? "Nothing yet this week. Every step counts!" : "Nothing earned this week."}</p>`);
+    const sums = [];
+    if (rounding) sums.push(["Rounding", "the week is rounded as a whole, not line by line",(rounding > 0 ? "+" : "−") + gbp(Math.abs(rounding))]);
+    if (cap) sums.push([`Capped at ${s.week_cap_points} pts`, `${w.points.toFixed(1)} pts earned, ${w.points_paid_for.toFixed(1)} paid for`, "−" + gbp(-cap)]);
+    sums.push(["Total", `${w.points_paid_for.toFixed(2)} pts × ${pp}p${bonus ? ` + ${gbp(bonus)} bounty` : ""}`, gbp(w.pence)]);
+    parts.push(`<div class="wk-sums">${sums.map(([l, sub, v], i) => `
+      <div class="wk-sum${i === sums.length - 1 ? " total" : ""}"><span>${l}<small>${sub}</small></span><span class="wk-gbp">${v}</span></div>`).join("")}</div>`);
+    const also = [...(w.milestones || []).map((m) => "🏆 " + m.title), ...(w.records || []).map((r) => `🏅 ${r.title}: ${r.now}`)];
+    if (also.length) parts.push(`<p class="wk-also">Also won this week, for glory: ${also.map(esc).join(" · ")}</p>`);
+    $("week-body").innerHTML = parts.join("");
+    $("week-sheet").hidden = false;
+  }
+  function closeWeek() { weekOpen = null; $("week-sheet").hidden = true; }
+  const openRow = (e) => { const r = e.target.closest(".week[data-monday]"); if (r) openWeek(r.dataset.monday); };
+  $("weeks").addEventListener("click", openRow);
+  $("weeks").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openRow(e); } });
+  const openThisWeek = () => { const w = DATA && (DATA.weeks.find((x) => x.status === "current") || DATA.weeks[0]); if (w) openWeek(w.monday); };
+  $("hero-week").addEventListener("click", openThisWeek);
+  $("hero-week").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openThisWeek(); } });
+  $("week-body").addEventListener("click", (e) => { const r = e.target.closest(".wk-act[data-id]"); if (r) openSheet(+r.dataset.id); });
+  $("week-close").addEventListener("click", closeWeek);
+  $("week-sheet").addEventListener("click", (e) => { if (e.target === $("week-sheet")) closeWeek(); });
 
   let stepsChart = null;
   function renderSteps() {

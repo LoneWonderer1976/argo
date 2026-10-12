@@ -155,3 +155,33 @@ main { padding: 0 16px calc(24px + env(safe-area-inset-bottom)); max-width: 720p
 .best-when { color: var(--muted); font-size: .82rem; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .best-new { background: var(--accent); color: #14202e; font-size: .65rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; vertical-align: middle; }
 .chip.steps.on { background: var(--accent); color: #14202e; }
+
+/* a week, opened (Thomas, 12/10/2026): every line of how it was earned */
+.tap { cursor: pointer; }
+.hero-main.tap:active, .week.tap:active { transform: scale(.995); }
+.week .chev { color: var(--muted); font-size: 1.3rem; line-height: 1; margin-left: -4px; }
+.wk-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-right: 40px; }
+.wk-top .sheet-title { padding-right: 0; }
+.wk-total { font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#week-sub { margin-top: 4px; font-size: .9rem; }
+.wk-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 18px 0 4px;
+  font-weight: 700; font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.wk-head span { font-weight: 500; text-transform: none; letter-spacing: 0; }
+.wk-act { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: start; padding: 8px 0;
+  border-top: 1px solid var(--line); cursor: pointer; }
+.wk-act .icon { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 1.1rem; }
+.wk-act .name { font-weight: 600; }
+.wk-act.struck .name, .wk-act.struck > .wk-gbp { text-decoration: line-through; opacity: .6; }
+.wk-how { color: var(--muted); font-size: .83rem; font-variant-numeric: tabular-nums; }
+.wk-how.warn { color: var(--owed); }
+.wk-gbp { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.wk-day { display: grid; grid-template-columns: 6.2em 1fr auto 4.4em; gap: 8px; align-items: baseline; padding: 5px 0;
+  border-top: 1px solid var(--line); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.wk-line { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.wk-day + .wk-line { font-weight: 600; }
+.wk-sums { margin-top: 16px; background: var(--bg); border-radius: 12px; padding: 2px 12px; }
+.wk-sum { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.wk-sum:first-child { border-top: 0; }
+.wk-sum small { display: block; color: var(--muted); font-size: .78rem; font-weight: 400; }
+.wk-sum.total { font-size: 1.1rem; font-weight: 800; }
+.wk-also { margin: 12px 0 0; color: var(--muted); font-size: .85rem; }

@@ -383,6 +383,30 @@ against the private repo's 2,000 free minutes a month (every 30 minutes would si
 and Garmin's unofficial API is known to throttle accounts polled hard. The steps are in README,
 *A sync on the hour*.
 
+## A week, opened: how every penny was earned (12/10/2026)
+
+Thomas, through Ben: *"Tom wants to be able to click on a week's earnings and see a breakdown of
+how the earnings were earnt"*. A week in the list, its bar in the chart, or the hero's *this week
+so far* opens a sheet (`openWeek` in `docs/app.js`), oldest line first:
+
+- **Each activity** with its money and the sum that made it, in the rate table's own words:
+  *4.56 mi walked × 2 pts a mile = 9.1 pts*, *66 m climbed × 2 pts per 100 m = 1.3 pts*. A struck
+  one says so with Dad's reason; an unpaid sport and one too short say why they earned nothing; a
+  flag is shown as on the activity's own sheet. Tapping one opens the activity on top.
+- **Each day's steps**, its points and its money, then the week's steps.
+- **The bounty**, if hit: its cash, or the treat. A missed one is not shown (the poster's rule:
+  nothing to feel bad about).
+- **The sums:** a *Rounding* line when there is one, the cap if it bit, and the total, which is
+  the week's own figure, *41.63 pts × 25p*. Then the eggs and bests of the week, *for glory*.
+
+**Derived on the page, not in data.json.** Everything it needs is already there (each activity's
+`points_distance` / `points_ascent` / `pence_share`, the days' steps, the week's `bounty`, `capped`,
+`pence_points`), so score.py is unchanged. **The lines always add up to the week:** the money is
+rounded once on the week's total (*The shape*), so the leftover of the lines' own rounding is a
+line of its own, and the cap and the bounty are worked from the week's figures, never re-priced.
+Checked on every listed week of his data (12; two carry a penny of rounding) and on a doctored
+copy for the struck, unpaid-sport, capped, cash-bounty and treat-bounty cases.
+
 ## Not built, deliberately
 
 - **Screen time.** Ben: *"or possibly screentime or both"*. Points are the currency; a second
