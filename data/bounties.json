@@ -28,7 +28,7 @@
    "vetoed_on": null
   },
   "2026-10-19": {
-   "approved_on": null,
+   "approved_on": "2026-10-19",
    "by": "draw",
    "proposed_on": "2026-10-19",
    "reward": {
@@ -39,7 +39,7 @@
     "words": ""
    },
    "rolls": 0,
-   "status": "proposed",
+   "status": "live",
    "target": {
     "bar": 8,
     "counted": "one",
