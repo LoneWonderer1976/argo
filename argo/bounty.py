@@ -1,8 +1,8 @@
 """bounty.py -- the week's bounty for Thomas: one target, one bar, one reward, live on Dad's yes.
 
     python -m argo.bounty                                   # this week's and next week's, and the menu
-    python -m argo.bounty --propose                         # draw next week's from the menu (dry run)
-    python -m argo.bounty --propose --apply --issue-file b.md   # Sunday's Action: body to the file, title to stdout
+    python -m argo.bounty --propose                         # draw the coming week's from the menu (dry run)
+    python -m argo.bounty --propose --apply --issue-file b.md   # Sunday night's Action: body to the file, title to stdout
     python -m argo.bounty --do "reroll" --apply
     python -m argo.bounty --do "target cycle_miles 10; reward x2; approve" --week 2026-10-12 --apply
     python -m argo.bounty --reply --issue-body issue.md --comment comment.md --apply
@@ -16,8 +16,9 @@ ARGO_BRIEF.md, "Bounties".
 - THE MENU IS BEN'S: data/bounty_targets.csv (what a bounty asks, each line with the range its bar
   is drawn from and a weight) and data/bounty_rewards.csv (what it pays). Both open in Excel. The
   draw only ever takes a line marked on; a bar is a step inside that line's range.
-- NOTHING REACHES HIS PAGE WITHOUT DAD'S YES. Sunday's Action proposes next week's bounty as an
-  issue; a reply -- approve, veto, reroll, bar N, reward ..., target <key> -- is the decision.
+- NOTHING REACHES HIS PAGE WITHOUT DAD'S YES. Sunday night's Action (just after midnight, so
+  Monday) proposes the bounty for the week starting that day as an issue; a reply -- approve,
+  veto, reroll, bar N, reward ..., target <key> -- is the decision.
   A proposal never approved lapses with its week.
 - A LIVE BOUNTY IS A PROMISE: it may be eased (a lower bar) or sweetened (more of the same reward),
   never withdrawn, made harder or swapped.
@@ -36,7 +37,7 @@ import re
 import sys
 
 from . import rates, store
-from .weeks import this_week, today_uk, week_label, week_of
+from .weeks import next_monday, this_week, today_uk, week_label, week_of
 
 SCOPES = {"run": ("run",), "walk": ("walk",), "cycle": ("cycle",), "swim": ("swim",), "kayak": ("kayak",),
           "foot": ("walk", "run"), "any": tuple(rates.SPORTS)}
@@ -794,7 +795,7 @@ def selftest() -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--week", help="the bounty's Monday (default: the one waiting, else next week)")
-    ap.add_argument("--propose", action="store_true", help="draw next week's bounty if it has none")
+    ap.add_argument("--propose", action="store_true", help="draw the coming week's bounty (today's on a Monday) if it has none")
     ap.add_argument("--issue-file", metavar="PATH", help="with --propose: the issue body here, the title to stdout")
     ap.add_argument("--do", metavar="COMMANDS", help="Dad's lines: approve, veto, reroll, bar 8, reward x2, target <key> ...")
     ap.add_argument("--reply", action="store_true", help="read --issue-body and --comment, as the reply workflow does")
@@ -809,7 +810,7 @@ def main() -> None:
         selftest()
         return
     if a.propose:
-        monday = a.week or (this_week() + dt.timedelta(days=7)).isoformat()
+        monday = a.week or next_monday().isoformat()
         b = propose(monday, a.apply)
         say = sys.stderr if a.issue_file else sys.stdout
         if b is None:

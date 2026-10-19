@@ -224,6 +224,12 @@ def main() -> None:
         return
     monday = dt.date.fromisoformat(a.week) if a.week else last_week()
     data = score.build()
+    week = next((w for w in data["weeks"] if w["monday"] == monday.isoformat()), None)
+    if not (a.week or a.print) and week and week["status"] == "paid":
+        # the scheduled run never re-sends a settled week (18/10/2026 sent 5-11 Oct a second time);
+        # nothing on stdout, so the Action has no title and opens no issue. --week sends it anyway.
+        print(f"{week['label']} is already paid ({week['paid_on']}); no statement", file=sys.stderr)
+        return
     if a.issue_file:
         title, md = compose_markdown(data, monday)
         open(a.issue_file, "w", encoding="utf-8").write(md)

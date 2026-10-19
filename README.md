@@ -42,9 +42,9 @@ Steps count from the same day (`STEPS_START`): 50p per 10,000, gross, every day,
 
 - Monday to Sunday, UK time. The scheme opens on `SCHEME_START` (rates.py); nothing before it counts
   (it is on his page as history, earning nothing).
-- **Sunday night** a statement issue opens and GitHub emails it to you: every activity, its
-  points, anything flagged (implausible speed, no heart rate, an unscored sport), the eggs found,
-  the week's money and the running total owed.
+- **Sunday night**, just after midnight (so the week is over), a statement issue opens and GitHub
+  emails it to you: every activity, its points, anything flagged (implausible speed, no heart
+  rate, an unscored sport), the eggs found, the week's money and the running total owed.
 - **Pay:** reply to the email (or comment on the issue) with **paid** — the week is marked paid,
   the issue closes, his page moves it from *owed* to *paid*. **paid all** settles every unpaid week
   up to that one. A word after it (**paid cash**) is kept as a note.
@@ -79,8 +79,9 @@ One mission a week on top of his usual pocket money: a target (*Ride 10 miles th
 bar, one reward (a fixed bonus, a multiplier on that sport's money or on the whole week, or a
 real-world treat you hand over yourself).
 
-- **Sunday night**, after the statement, a second issue opens with **next week's bounty, drawn
-  from your menu**. Thomas cannot see it yet.
+- **Sunday night**, after the statement, a second issue opens with **the bounty for the week
+  starting that morning, drawn from your menu**. If GitHub misses that run, the next hourly sync
+  opens it instead, so every week gets one. Thomas cannot see it yet.
 - **Reply** `approve` and it goes on his page as a wanted poster with a progress bar. `veto` means
   no bounty that week. `reroll` draws another. `bar 8`, `reward £3`, `reward x2`,
   `reward week x1.5` and `reward treat <what it is>` change it, and `target <key>` picks another

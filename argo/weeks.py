@@ -29,8 +29,16 @@ def this_week() -> dt.date:
 
 
 def last_week() -> dt.date:
-    """The most recently COMPLETED week -- what the Sunday statement is about."""
+    """The most recently COMPLETED week -- what the statement is about. It runs just after
+    midnight on Sunday night, so that this is the week that has just ended: on a Sunday evening it
+    would still be the week before (18/10/2026, when GitHub ran it at 23:37 and not after midnight)."""
     return this_week() - dt.timedelta(days=7)
+
+
+def next_monday(today: dt.date | None = None) -> dt.date:
+    """The next week to start, today's if today is a Monday -- the week the statement run draws a
+    bounty for, whether it runs on the Monday as scheduled or by hand any other day."""
+    return week_of((today or today_uk()) + dt.timedelta(days=6))
 
 
 def week_label(monday: dt.date) -> str:
@@ -48,6 +56,9 @@ def selftest() -> None:
     assert week_label(dt.date(2026, 9, 21)) == "21–27 Sep 2026"
     assert week_label(dt.date(2026, 9, 28)) == "28 Sep – 4 Oct 2026"
     assert this_week().weekday() == 0 and last_week() == this_week() - dt.timedelta(days=7)
+    assert next_monday(dt.date(2026, 10, 19)) == dt.date(2026, 10, 19)    # Monday's run: the week starting today
+    assert next_monday(dt.date(2026, 10, 18)) == dt.date(2026, 10, 19)    # by hand on a Sunday: tomorrow's
+    assert next_monday(dt.date(2026, 10, 20)) == dt.date(2026, 10, 26)    # by hand midweek: next week's
     print("weeks: selftest OK")
 
 

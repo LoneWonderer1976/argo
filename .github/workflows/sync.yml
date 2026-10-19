@@ -1,4 +1,5 @@
 # Hourly: fetch new activities from Garmin, re-score, publish the page. Commits only when something changed.
+# And this week's bounty, if Monday's statement run has not drawn it (.github/propose-bounty.sh).
 name: sync
 on:
   schedule:
@@ -10,7 +11,7 @@ on:
         type: boolean
         default: false
 concurrency: { group: argo-data, cancel-in-progress: false }
-permissions: { contents: write }
+permissions: { contents: write, issues: write }
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -31,3 +32,8 @@ jobs:
           git add data docs
           git diff --cached --quiet && echo "nothing new" || git commit -m "sync $(date -u +'%Y-%m-%d %H:%M')" -q
           git push
+      - name: this week's bounty, if Monday's statement run has not drawn it
+        if: ${{ !cancelled() }}    # a Garmin outage must not cost him his bounty
+        continue-on-error: true    # a broken menu fails Monday's statement run loudly once, not every hour
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: bash .github/propose-bounty.sh "$(python -c 'from argo.weeks import this_week; print(this_week())')"

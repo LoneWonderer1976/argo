@@ -291,10 +291,12 @@ week, and a first in an empty one. *Two outings this week* would have been hit i
 - **No speed or pace bounties.** A speed bar rewards rushing on a bike on the roads, and speed
   is where a car journey passing as a ride would show.
 - **The weekly cycle:**
-  - **Sunday:** `statement.yml`'s second job, which runs after the statement whatever it did,
-    draws next week's bounty (`--propose`). The draw is seeded by the week, never repeats last
+  - **Sunday night:** `statement.yml`'s second job, which runs after the statement whatever it
+    did, draws the bounty for the week starting that morning (`--propose`, `weeks.next_monday`). The draw is seeded by the week, never repeats last
     week's target, and skips a week that already has one. The job closes any open bounty issue
-    as lapsed, then opens the new one with the week marker `<!-- argo-bounty: ... -->`.
+    as lapsed, then opens the new one with the week marker `<!-- argo-bounty: ... -->`. Every hourly
+    sync does the same for the week it is in (`.github/propose-bounty.sh`, shared), so a Monday
+    GitHub's best-effort schedule drops still gets its bounty within the hour.
   - **Ben's reply** goes to `paid.yml`'s second job. It is the same workflow as the paid replies
     on purpose: two workflows woken by one comment share the `argo-data` concurrency group, and a
     second pending run cancels the first.
@@ -406,6 +408,22 @@ rounded once on the week's total (*The shape*), so the leftover of the lines' ow
 line of its own, and the cap and the bounty are worked from the week's figures, never re-priced.
 Checked on every listed week of his data (12; two carry a penny of rounding) and on a doctored
 copy for the struck, unpaid-sport, capped, cash-bounty and treat-bounty cases.
+
+## The statement's hour (19/10/2026)
+
+The statement was timed for Sunday 21:45, but everything else counts a week as over at midnight:
+`last_week()`, `pay.py`'s refusal of an unfinished week, the page's *current* week. It worked only
+because GitHub ran it hours late, always past midnight. On 18/10/2026 late was 23:37, still
+Sunday, so it re-sent 5–11 Oct (already paid) and nothing about 12–18 Oct. And a run past midnight
+had been drawing the bounty for the week AFTER the one starting, so 12–18 Oct had none. Now the
+run is Monday 00:17 UTC (01:17 BST / 00:17 GMT), past midnight whatever GitHub's lag; the bounty
+is for `next_monday()` (the week starting today, on a Monday); and the scheduled run sends
+nothing for a week already paid. Moving the hour, not teaching every module that a week ends on
+Sunday evening, keeps one definition of a finished week. The 13-mile bounty Ben approved on
+12/10/2026 (#5) was filed under 19–25 Oct; it was that week's in his eyes, so it was moved to
+12–18 Oct and 19–25 Oct drew a fresh one. And every hourly sync now draws the week's bounty if
+it has none, so a Monday cannot pass without one (Ben: *"make sure each monday always has a new
+bounty"*).
 
 ## Not built, deliberately
 

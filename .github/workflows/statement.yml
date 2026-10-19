@@ -1,10 +1,14 @@
-# Sunday night: the week's statement to Ben, as a GitHub ISSUE -- GitHub emails him about it like
-# any issue, and his reply of "paid" (from the email or on the issue) settles the week (paid.yml).
+# Sunday night, just after midnight: the week's statement to Ben, as a GitHub ISSUE -- GitHub
+# emails him about it like any issue, and his reply of "paid" (from the email or on the issue)
+# settles the week (paid.yml).
 # Nothing to configure. If the SMTP secrets are set as well, a proper email goes out too.
 name: statement
 on:
   schedule:
-    - cron: "45 20 * * 0"        # Sunday 20:45 UTC = 21:45 BST / 20:45 GMT
+    # Monday 00:17 UTC = 01:17 BST / 00:17 GMT: always past midnight in the UK, so the week it
+    # reports has ENDED (weeks.last_week). Sunday 20:45 was the old time: GitHub ran it late, and
+    # when late was 23:37 and not after midnight it sent the week before again (18/10/2026).
+    - cron: "17 0 * * 1"
   workflow_dispatch:
     inputs:
       week:
@@ -40,6 +44,7 @@ jobs:
           PAGE_URL: "${{ vars.PAGE_URL }}"
         run: |
           TITLE=$(python -m argo.statement --issue-file body.md ${{ inputs.week && format('--week {0}', inputs.week) || '' }})
+          if [ -z "$TITLE" ]; then exit 0; fi        # that week is already paid: nothing to send
           gh issue create --title "$TITLE" --body-file body.md
       - name: and an email, if SMTP is set up
         if: ${{ env.SMTP_USER != '' }}
@@ -52,9 +57,11 @@ jobs:
           PAY_URL: "${{ github.server_url }}/${{ github.repository }}/issues"
         run: python -m argo.statement ${{ inputs.week && format('--week {0}', inputs.week) || '' }}
 
-  # Then next week's bounty, drawn from Ben's menu and opened as its own issue (ARGO_BRIEF
-  # "Bounties"). Nothing reaches Thomas's page until Ben replies "approve" (paid.yml's bounty job).
-  # A week that already has one is left alone, so a re-run of the statement draws nothing.
+  # Then the bounty for the week starting that morning, drawn from Ben's menu and opened as its
+  # own issue (ARGO_BRIEF "Bounties"). Nothing reaches Thomas's page until Ben replies "approve"
+  # (paid.yml's bounty job). A week that already has one is left alone, so a re-run of the
+  # statement draws nothing. The hourly sync makes the same draw for the week it is in, so a
+  # missed run is made up within the hour.
   bounty:
     needs: statement
     if: ${{ always() }}
@@ -64,18 +71,7 @@ jobs:
         with: { ref: "${{ github.ref_name }}" }      # the branch's head: the statement job has pushed since
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - name: propose next week's bounty
+      - name: propose the bounty for the week starting today
         env:
           GH_TOKEN: "${{ github.token }}"
-        run: |
-          TITLE=$(python -m argo.bounty --propose --issue-file bounty.md --apply)
-          if [ -z "$TITLE" ]; then exit 0; fi
-          git config user.name "argo"
-          git config user.email "argo@users.noreply.github.com"
-          git add data
-          git commit -qm "bounty proposed: $TITLE"
-          git push
-          for n in $(gh issue list --state open --search 'in:title "Argo bounty"' --json number --jq '.[].number'); do
-            gh issue close "$n" --comment "Lapsed: next week's bounty has just been proposed." || true
-          done
-          gh issue create --title "$TITLE" --body-file bounty.md
+        run: bash .github/propose-bounty.sh
