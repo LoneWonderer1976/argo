@@ -26,6 +26,33 @@
     "words": "Ride {bar} miles this week, as many rides as you like"
    },
    "vetoed_on": null
+  },
+  "2026-10-19": {
+   "approved_on": null,
+   "by": "draw",
+   "proposed_on": "2026-10-19",
+   "reward": {
+    "cap_pence": null,
+    "key": "cash_bonus",
+    "type": "fixed",
+    "value": 300,
+    "words": ""
+   },
+   "rolls": 0,
+   "status": "proposed",
+   "target": {
+    "bar": 8,
+    "counted": "one",
+    "key": "cycle_one_ride",
+    "metric": "miles",
+    "range": [
+     6,
+     12
+    ],
+    "sports": "cycle",
+    "words": "One ride of {bar} miles or more"
+   },
+   "vetoed_on": null
   }
  }
 }
