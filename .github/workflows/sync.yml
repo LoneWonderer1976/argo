@@ -36,4 +36,4 @@ jobs:
         if: ${{ !cancelled() }}    # a Garmin outage must not cost him his bounty
         continue-on-error: true    # a broken menu fails Monday's statement run loudly once, not every hour
         env: { GH_TOKEN: "${{ github.token }}" }
-        run: bash .github/propose-bounty.sh "$(python -c 'from argo.weeks import this_week; print(this_week())')"
+        run: bash .github/propose-bounty.sh

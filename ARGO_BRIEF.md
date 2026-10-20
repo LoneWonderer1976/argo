@@ -292,7 +292,8 @@ week, and a first in an empty one. *Two outings this week* would have been hit i
   is where a car journey passing as a ride would show.
 - **The weekly cycle:**
   - **Sunday night:** `statement.yml`'s second job, which runs after the statement whatever it
-    did, draws the bounty for the week starting that morning (`--propose`, `weeks.next_monday`). The draw is seeded by the week, never repeats last
+    did, draws the bounty for the week starting that morning (`.github/propose-bounty.sh`: always
+    THIS week's, so a statement re-sent by hand midweek never draws next week's early). The draw is seeded by the week, never repeats last
     week's target, and skips a week that already has one. The job closes any open bounty issue
     as lapsed, then opens the new one with the week marker `<!-- argo-bounty: ... -->`. Every hourly
     sync does the same for the week it is in (`.github/propose-bounty.sh`, shared), so a Monday

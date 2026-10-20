@@ -36,8 +36,8 @@ def last_week() -> dt.date:
 
 
 def next_monday(today: dt.date | None = None) -> dt.date:
-    """The next week to start, today's if today is a Monday -- the week the statement run draws a
-    bounty for, whether it runs on the Monday as scheduled or by hand any other day."""
+    """The next week to start, today's if today is a Monday -- what `argo.bounty --propose` draws for
+    on the PC. The Actions draw only ever THIS week's (.github/propose-bounty.sh)."""
     return week_of((today or today_uk()) + dt.timedelta(days=6))
 
 

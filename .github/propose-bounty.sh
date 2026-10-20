@@ -4,11 +4,13 @@
 # statement.yml after Monday's statement, and every hourly sync for the week it is in -- GitHub's
 # own schedule is best-effort, the sync is started by cron-job.org, so a Monday the statement run
 # missed is made up within the hour. A week that has one -- proposed, live or vetoed -- is left
-# alone, so the two never draw twice. Needs GH_TOKEN with issues: write.
+# alone, so the two never draw twice. Always THIS week's: a statement re-sent by hand midweek must
+# not draw next week's early (that is how 19-25 Oct got 12-18 Oct's). Needs GH_TOKEN, issues: write.
 #
-#   bash .github/propose-bounty.sh [MONDAY]     (blank: argo.weeks.next_monday)
+#   bash .github/propose-bounty.sh [MONDAY]     (blank: this week's)
 set -euo pipefail
-TITLE=$(python -m argo.bounty --propose ${1:+--week "$1"} --issue-file bounty.md --apply)
+WEEK=${1:-$(python -c 'from argo.weeks import this_week; print(this_week())')}
+TITLE=$(python -m argo.bounty --propose --week "$WEEK" --issue-file bounty.md --apply)
 if [ -z "$TITLE" ]; then exit 0; fi
 git config user.name "argo"
 git config user.email "argo@users.noreply.github.com"

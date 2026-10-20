@@ -57,7 +57,7 @@ jobs:
           PAY_URL: "${{ github.server_url }}/${{ github.repository }}/issues"
         run: python -m argo.statement ${{ inputs.week && format('--week {0}', inputs.week) || '' }}
 
-  # Then the bounty for the week starting that morning, drawn from Ben's menu and opened as its
+  # Then this week's bounty -- the week starting that morning -- drawn from Ben's menu and opened as its
   # own issue (ARGO_BRIEF "Bounties"). Nothing reaches Thomas's page until Ben replies "approve"
   # (paid.yml's bounty job). A week that already has one is left alone, so a re-run of the
   # statement draws nothing. The hourly sync makes the same draw for the week it is in, so a
@@ -71,7 +71,7 @@ jobs:
         with: { ref: "${{ github.ref_name }}" }      # the branch's head: the statement job has pushed since
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - name: propose the bounty for the week starting today
+      - name: propose this week's bounty, if it has none
         env:
           GH_TOKEN: "${{ github.token }}"
         run: bash .github/propose-bounty.sh
