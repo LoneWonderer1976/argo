@@ -53,6 +53,33 @@
     "words": "One ride of {bar} miles or more"
    },
    "vetoed_on": null
+  },
+  "2026-10-26": {
+   "approved_on": null,
+   "by": "draw",
+   "proposed_on": "2026-10-26",
+   "reward": {
+    "cap_pence": 500,
+    "key": "double_it",
+    "type": "target_x",
+    "value": 2,
+    "words": ""
+   },
+   "rolls": 0,
+   "status": "proposed",
+   "target": {
+    "bar": 7,
+    "counted": "one",
+    "key": "walk_one",
+    "metric": "miles",
+    "range": [
+     4,
+     7
+    ],
+    "sports": "walk",
+    "words": "One walk of {bar} miles or more"
+   },
+   "vetoed_on": null
   }
  }
 }
