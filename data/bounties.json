@@ -80,6 +80,33 @@
     "words": "One walk of {bar} miles or more"
    },
    "vetoed_on": null
+  },
+  "2026-11-02": {
+   "approved_on": null,
+   "by": "draw",
+   "proposed_on": "2026-11-02",
+   "reward": {
+    "cap_pence": 500,
+    "key": "double_it",
+    "type": "target_x",
+    "value": 2,
+    "words": ""
+   },
+   "rolls": 0,
+   "status": "proposed",
+   "target": {
+    "bar": 3,
+    "counted": "week",
+    "key": "outings",
+    "metric": "outings",
+    "range": [
+     2,
+     3
+    ],
+    "sports": "any",
+    "words": "Get out {bar} times this week: walk, ride, anything"
+   },
+   "vetoed_on": null
   }
  }
 }
