@@ -122,6 +122,10 @@ like you to do as many of the steps as you can before I do anything manually."*
   *paid*, *paid all*, *strike <id> reason*, *unstrike <id>* — makes the write, answers on the
   issue and closes it. `argo/reply.py` is the parser; a refusal from `pay.py` (the week is not
   over) is posted as the answer rather than failing the run. SMTP stays as an optional extra.
+  **The quoted email is cut off first** (`argo/mail.py`, shared with the bounty reader): on
+  16/11/2026 his phone's reply arrived as `paidOn 16 Nov 2026 06:27, ... wrote:...`, the header
+  glued to the word, so it read as "paidon" and week 9–15 Nov stayed unpaid. The cut now finds an
+  "On <date> ... wrote:" header (or Outlook's From/Sent block) wherever it starts.
 - **The setup is two commands that need Ben and one that does not.** `gh auth login --web` (his
   GitHub, his browser), `python -m argo.login` (Thomas's Garmin password, typed by Ben, stored
   nowhere — the script sets the `GARMINTOKENS` secret through `gh` itself and starts the first

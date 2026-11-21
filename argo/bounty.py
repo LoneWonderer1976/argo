@@ -36,7 +36,7 @@ import random
 import re
 import sys
 
-from . import rates, store
+from . import mail, rates, store
 from .weeks import next_monday, this_week, today_uk, week_label, week_of
 
 SCOPES = {"run": ("run",), "walk": ("walk",), "cycle": ("cycle",), "swim": ("swim",), "kayak": ("kayak",),
@@ -429,10 +429,10 @@ def describe(b: dict) -> list[str]:
 
 def _lines(text: str) -> list[str]:
     out = []
-    for line in re.split(r"[\n;]", text or ""):
+    for line in re.split(r"[\n;]", mail.own_words(text)):   # mail.py cuts the quoted email off
         line = line.strip()
-        if line.startswith(">") or re.match(r"^On .+wrote:$", line):
-            break                               # the quoted email below a reply
+        if line.startswith(">"):
+            break                               # a quote with no header above it
         if line:
             out.append(line)
     return out

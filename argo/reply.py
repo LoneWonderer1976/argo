@@ -3,7 +3,8 @@
     python -m argo.reply --issue-body issue.md --comment comment.md [--apply]
 
 The statement issue carries `<!-- argo-week: 2026-09-21 -->`; a comment on it (a reply to the
-notification email lands here too) is read for its FIRST non-empty line:
+notification email lands here too) is read for its FIRST non-empty line above the quoted email
+(`mail.own_words`, even when a phone glues the quote's header onto the word):
 
     paid                      mark that week paid
     paid all                  mark every unpaid week up to and including it
@@ -20,13 +21,13 @@ back as a comment; "CLOSE" on the last line tells it to close the issue.
 import argparse
 import re
 
-from . import pay, rates, score, settings
+from . import mail, pay, rates, score, settings
 
 WEEK_RE = re.compile(r"<!--\s*argo-week:\s*(\d{4}-\d{2}-\d{2})\s*-->")
 
 
 def first_line(text: str) -> str:
-    for line in (text or "").splitlines():
+    for line in mail.own_words(text).splitlines():
         line = line.strip()
         if line and not line.startswith(">"):
             return line
@@ -93,6 +94,8 @@ def selftest() -> None:
     assert first_line("> quoted only") == ""
     assert parse("Paid.\nthanks") == ("paid", [])
     assert parse("paid all") == ("paid", ["all"])
+    assert parse('paidOn 16 Nov 2026 06:27, "github-actions[bot]" ***@***.***> wrote:github-actions[bot] '
+                 'created an issue\r\n\r\n2 activities') == ("paid", [])     # the email that glued its quote on (16/11)
     assert parse("strike 123 that was the car") == ("strike", ["123", "that", "was", "the", "car"])
     assert WEEK_RE.search("x\n<!-- argo-week: 2026-09-21 -->\ny").group(1) == "2026-09-21"
     assert "no week marker" in handle("no marker", "paid", False)
