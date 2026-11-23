@@ -161,6 +161,33 @@
     "words": "Get out {bar} times this week: walk, ride, anything"
    },
    "vetoed_on": null
+  },
+  "2026-11-23": {
+   "approved_on": null,
+   "by": "draw",
+   "proposed_on": "2026-11-23",
+   "reward": {
+    "cap_pence": null,
+    "key": "cash_bonus",
+    "type": "fixed",
+    "value": 250,
+    "words": ""
+   },
+   "rolls": 0,
+   "status": "proposed",
+   "target": {
+    "bar": 2,
+    "counted": "week",
+    "key": "cycle_rides",
+    "metric": "outings",
+    "range": [
+     2,
+     3
+    ],
+    "sports": "cycle",
+    "words": "Go out on your bike {bar} times this week"
+   },
+   "vetoed_on": null
   }
  }
 }
